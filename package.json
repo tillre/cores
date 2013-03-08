@@ -1,0 +1,22 @@
+{
+  "name": "moskito",
+  "version": "0.0.1",
+  "description": "lightweight couchdb models",
+  "main": "index.js",
+  "scripts": {
+    "test": "./node_modules/mocha/bin/mocha",
+    "watch-tests": "./node_modules/mocha/bin/mocha -w"
+  },
+  "repository": "",
+  "author": "",
+  "license": "BSD",
+
+  "dependencies": {
+    "underscore": "1.4.x",
+    "nano": "3.3.x"
+  },
+  "devDependencies": {
+    "mocha": "1.8.x",
+    "chai": "1.5.x"
+  }
+}
