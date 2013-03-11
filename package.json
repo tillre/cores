@@ -4,8 +4,8 @@
   "description": "lightweight couchdb models",
   "main": "index.js",
   "scripts": {
-    "test": "./node_modules/mocha/bin/mocha",
-    "watch-tests": "./node_modules/mocha/bin/mocha -w"
+    "test": "./node_modules/mocha/bin/mocha ./test",
+    "watch-tests": "./node_modules/mocha/bin/mocha -w ./test"
   },
   "repository": "",
   "author": "",
