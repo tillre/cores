@@ -6,10 +6,10 @@ var validate = require('joskito');
 var emptyFunction = function() {};
 
 
-var Model = function(db, name, schema) {
+var Model = function(db, schema) {
   this.db = db;
-  this.name = name;
   this.schema = schema;
+  this.name = schema.name;
 
   this.data = null;
   this.id = null;
@@ -136,27 +136,30 @@ module.exports = function moskito(db) {
   var models = {};
   
   return {
-    createModel: function(name, schema) {
-      if (models[name]) {
-        throw new Error('Model with name "' + name + '" already exists');
-      }
-      var m =  new Model(db, name, schema);
-      models[m.name] = m;
-      return m;
-    },
 
-    createModelFromDescription: function(schema, design, cb) {
+    createModel: function(schema, design, cb) {
       cb = cb || emptyFunction;
       
+      if (_.isFunction(design)) {
+        cb = design;
+        design = null;
+      }
+
       if (!schema.name) {
-        cb(new Error('Model schema has no name property.'));
+        cb(new Error('Model schema has no name property'));
         return;
       }
-      var m = new Model(db, schema.name, schema, design);
-      m.syncDesign(design, function(err) {
-        cb(err, m);
-      });
+      var m = new Model(db, schema);
+      models[m.name] = m;
+      
+      if (!design) cb(null, m);
+      else {
+        m.syncDesign(design, function(err) {
+          cb(err, m);
+        });
+      }
     }
+
   };
 };
 

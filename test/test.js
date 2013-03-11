@@ -35,15 +35,21 @@ describe('moskito', function() {
 
   describe('model with schema', function() {
     var model = null,
-        schema =  {properties: {
-          foo: {type: 'string'},
-          bar: {type: 'number'}
-        }};
+        schema =  {
+          name: 'foobar',
+          properties: {
+            foo: {type: 'string'},
+            bar: {type: 'number'}
+          }
+        };
 
-    it('should be created', function() {
-	  model = mos.createModel('foobar', schema);
-      expect(model).to.exist;
-      expect(model.name).to.be.equal('foobar');
+    it('should be created', function(done) {
+	  mos.createModel(schema, function(err, m) {
+        model = m;
+        expect(model).to.exist;
+        expect(model.name).to.be.equal('foobar');
+        done(err);
+      });
     });
 
     it('should allow valid data', function(done) {
@@ -76,7 +82,7 @@ describe('moskito', function() {
         modelId = null;
     
     it('should be created', function(done) {
-      mos.createModelFromDescription(schema, design, function(err, m) {
+      mos.createModel(schema, design, function(err, m) {
         expect(m).to.be.a('object');
         model = m;
         done(err);
@@ -108,7 +114,7 @@ describe('moskito', function() {
     });
     
     it('should be loadable by id', function(done) {
-      var m = mos.createModelFromDescription(schema, design, function(err, m) {
+      var m = mos.createModel(schema, design, function(err, m) {
         if (err) done(err);
         else {
           m.load(model.id, function(err) {
