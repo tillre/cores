@@ -5,6 +5,7 @@ var async = require('async');
 var nano = require('nano')('http://localhost:5984');
 var moskito = require('../');
 
+
 describe('moskito', function() {
 
   // test data
@@ -45,7 +46,7 @@ describe('moskito', function() {
     var layout = null;
     
     it('should create', function(done) {
-      mosi.layout.create(schema, design, function(err, l) {
+      mosi.layout(schema, design, function(err, l) {
         expect(l).to.exist;
         layout = l;
         done(err);

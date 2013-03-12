@@ -14,13 +14,10 @@ module.exports = function moskito(db) {
 
   var mosi = {
     view: callView,
-    // list: callList,
-    // show: callShow,
     
     layouts: {},
-    layout: {
-      create: createLayout
-    },
+    layout: createLayout,
+
     model: {
       create: createModel,
       validate: validateModel,
