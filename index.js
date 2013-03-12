@@ -1,6 +1,6 @@
 var _ = require('underscore');
 var nano = require('nano')('http://localhost:5984');
-var validate = require('joskito');
+var validate = require('jski');
 
 
 var emptyFunction = function() {};
@@ -10,14 +10,14 @@ var deepClone = function(d) { return JSON.parse(JSON.stringify(d)); };
 var layoutNameProp = 'type';
 
 
-module.exports = function moskito(db) {
+module.exports = function(db) {
 
-  var mosi = {
-    view: callView,
-    
+  var comodl = {
     layouts: {},
     layout: createLayout,
 
+    view: callView,
+    
     model: {
       create: createModel,
       validate: validateModel,
@@ -42,7 +42,7 @@ module.exports = function moskito(db) {
       cb(new Error('Schema needs a name property'));
       return;
     }
-    if (mosi.layouts[schema.name]) {
+    if (comodl.layouts[schema.name]) {
       cb(new Error('Layout name ' + schema.name + ' already taken.'));
       return;
     }
@@ -53,7 +53,7 @@ module.exports = function moskito(db) {
       name: schema.name,
       hooks: hooks || {} // TODO: implement hooks
     };
-    mosi.layouts[l.name] = l;
+    comodl.layouts[l.name] = l;
     if (!l.design) {
       cb(null, l);
     }
@@ -104,7 +104,7 @@ module.exports = function moskito(db) {
       params = null;
     }
     
-    var layout = mosi.layouts[layoutName];
+    var layout = comodl.layouts[layoutName];
     if (!layout)  {
       cb(new Error('Layout not found with name, ' + layoutName + '.'));
       return;
@@ -116,7 +116,7 @@ module.exports = function moskito(db) {
       if (err) cb(err);
       else {
         // call layout function from design file
-        layout.design.views[viewName].layout(mosi, result, cb);
+        layout.design.views[viewName].layout(comodl, result, cb);
       }
     });
   }
@@ -132,12 +132,12 @@ module.exports = function moskito(db) {
       data = null;
     }
     
-    if (!mosi.layouts[layoutName]) {
+    if (!comodl.layouts[layoutName]) {
       cb(new Error('No model layout found with name, '  + layoutName));
       return;
     }
     var m = {
-      layout: mosi.layouts[layoutName],
+      layout: comodl.layouts[layoutName],
       data: deepClone(data),
       id: null,
       rev: null
@@ -244,5 +244,5 @@ module.exports = function moskito(db) {
     });
   }
 
-  return mosi;
+  return comodl;
 };

@@ -1,7 +1,7 @@
 {
-  "name": "moskito",
+  "name": "comodl",
   "version": "0.0.1",
-  "description": "lightweight couchdb models",
+  "description": "thin couchdb model layer",
   "main": "index.js",
   "scripts": {
     "test": "./node_modules/mocha/bin/mocha ./test",

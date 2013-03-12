@@ -3,10 +3,10 @@
 var expect = require('chai').expect;
 var async = require('async');
 var nano = require('nano')('http://localhost:5984');
-var moskito = require('../');
+var comodl = require('../');
 
 
-describe('moskito', function() {
+describe('comodl', function() {
 
   // test data
   var schema = require('./schema'),
@@ -14,9 +14,9 @@ describe('moskito', function() {
       data = require('./data');
 
   // create db before tests and destroy afterwards
-  var dbName = 'moskito-test',
+  var dbName = 'comodl-test',
       db = nano.use(dbName),
-      mosi = moskito(db);
+      cm = comodl(db);
 
   
   before(function(done) {
@@ -46,7 +46,7 @@ describe('moskito', function() {
     var layout = null;
     
     it('should create', function(done) {
-      mosi.layout(schema, design, function(err, l) {
+      cm.layout(schema, design, function(err, l) {
         expect(l).to.exist;
         layout = l;
         done(err);
@@ -54,7 +54,7 @@ describe('moskito', function() {
     });
 
     it('should be registered', function() {
-      expect(mosi.layouts.Article).to.exist;
+      expect(cm.layouts.Article).to.exist;
     });
 
     it('should be in the db', function(done) {
@@ -69,25 +69,25 @@ describe('moskito', function() {
 
     before(function() {
       // depends on the layout tests
-      layout = mosi.layouts.Article;
+      layout = cm.layouts.Article;
     });
     
     it('should create', function(done) {
-      mosi.model.create(layout.name, function(err, m) {
+      cm.model.create(layout.name, function(err, m) {
         model = m;
         done(err);
       });
     });
 
     it('should not be valid without data', function(done) {
-      mosi.model.validate(model, function(err) {
+      cm.model.validate(model, function(err) {
         expect(err).to.exist;
         done();
       });
     });
 
     it('should not save when not valid', function(done) {
-      mosi.model.save(model, function(err) {
+      cm.model.save(model, function(err) {
         expect(err).to.exist;
         done();
       });
@@ -95,15 +95,15 @@ describe('moskito', function() {
     
     it('should be valid after setting data', function(done) {
       model.data = data;
-      mosi.model.validate(model, done);
+      cm.model.validate(model, done);
     });
 
     it('should save when valid', function(done) {
-      mosi.model.save(model, done);
+      cm.model.save(model, done);
     });
 
     it('should load', function(done) {
-      mosi.model.load(model.id, function(err, m2) {
+      cm.model.load(model.id, function(err, m2) {
         expect(err).to.not.exist;
         expect(m2).to.exist;
         expect(JSON.stringify(m2.data) === JSON.stringify(model.data));
@@ -112,7 +112,7 @@ describe('moskito', function() {
     });
 
     it('should destroy', function(done) {
-      mosi.model.destroy(model, done);
+      cm.model.destroy(model, done);
     });
   });
 
@@ -123,17 +123,17 @@ describe('moskito', function() {
 
     before(function(done) {
       // depends on the layout tests
-      layout = mosi.layouts.Article;
+      layout = cm.layouts.Article;
       async.times(numModels, function(i, cb) {
-        mosi.model.create(layout.name, data, function(err, m) {
+        cm.model.create(layout.name, data, function(err, m) {
           m.data.title = m.data.title + ' ' + i;
-          mosi.model.save(m, cb);
+          cm.model.save(m, cb);
         });
       }, done);
     });
 
     it('should call the view', function(done) {
-      mosi.view(layout.name, 'all', function(err, models) {
+      cm.view(layout.name, 'all', function(err, models) {
         expect(err).to.not.exist;
         expect(models).to.be.a('array');
         expect(models.length).to.equal(numModels);
