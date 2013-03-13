@@ -1,8 +1,5 @@
 module.exports = {
 
-  name: 'Article',
-  description: 'Some Article',
-
   properties: {
     title: { type: 'string', minLength: 1 },
     author: {

@@ -9,7 +9,8 @@ var comodl = require('../');
 describe('comodl', function() {
 
   // test data
-  var schema = require('./schema'),
+  var layoutName = 'Article',
+      schema = require('./schema'),
       design = require('./design'),
       data = require('./data');
 
@@ -46,7 +47,7 @@ describe('comodl', function() {
     var layout = null;
     
     it('should create', function(done) {
-      cm.layout(schema, design, function(err, l) {
+      cm.layout(layoutName, schema, design, function(err, l) {
         expect(l).to.exist;
         layout = l;
         done(err);

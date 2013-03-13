@@ -10,10 +10,10 @@ module.exports = {
           emit(doc._id, doc);
         }
       },
-      layout: function(mosi, result, cb) {
+      layout: function(cm, result, cb) {
         async.map(result.rows,
                   function(data, cb2) {
-                    mosi.model.create('Article', data.value, cb2);
+                    cm.model.create('Article', data.value, cb2);
                   },
                   cb);
       }

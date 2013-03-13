@@ -31,18 +31,14 @@ module.exports = function(db) {
   //
   // create a model layout (schema, design, [hooks], [cb])
   //
-  function createLayout(schema, design, hooks, cb) {
+  function createLayout(name, schema, design, hooks, cb) {
     cb = cb || emptyFunction;
     if (_.isFunction(hooks)) {
       cb = hooks;
       hooks = null;
     }
     
-    if (!schema.name) {
-      cb(new Error('Schema needs a name property'));
-      return;
-    }
-    if (comodl.layouts[schema.name]) {
+    if (comodl.layouts[name]) {
       cb(new Error('Layout name ' + schema.name + ' already taken.'));
       return;
     }
@@ -50,7 +46,7 @@ module.exports = function(db) {
     var l = {
       schema: schema,
       design: design,
-      name: schema.name,
+      name: name,
       hooks: hooks || {} // TODO: implement hooks
     };
     comodl.layouts[l.name] = l;
@@ -58,7 +54,7 @@ module.exports = function(db) {
       cb(null, l);
     }
     else {
-      l.design.name = l.schema.name.toLowerCase();
+      l.design.name = l.name.toLowerCase();
       // upload the design to the db
       syncDesign(l.design.name, design, function(err) {
         cb(err, err ? null : l);
@@ -68,7 +64,7 @@ module.exports = function(db) {
 
 
   //
-  // save/update the douchdb design doc
+  // save/update the couchdb design doc
   //
   function syncDesign(name, design, cb) {
     cb = cb || emptyFunction;
