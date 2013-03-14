@@ -110,7 +110,11 @@ describe('comodl', function() {
 
     it('should save when updated', function(done) {
       model.data.title = 'Some other title';
-      cm.model.save(model, done);
+      cm.model.save(model, function(err, m2) {
+        expect(err).to.not.exist;
+        expect(model.id).to.equal(m2.id);
+        done();
+      });
     });
 
     it('should load', function(done) {
@@ -125,13 +129,21 @@ describe('comodl', function() {
     });
 
     it('should destroy', function(done) {
-      cm.model.destroy(model, done);
+      var id = model.id;
+      cm.model.destroy(model.id, model.rev, function(err) {
+        cm.model.load(id, function(err, model) {
+          expect(err).to.exist;
+          expect(model).to.not.exist;
+          done();
+        });
+      });
     });
   });
 
   
   describe('layout views', function() {
     var layout = null,
+        models = [];
         numModels = 3;
 
     before(function(done) {
@@ -140,11 +152,23 @@ describe('comodl', function() {
       async.times(numModels, function(i, cb) {
         cm.model.create(layout.name, data, function(err, m) {
           m.data.title = m.data.title + ' ' + i;
-          cm.model.save(m, cb);
+          cm.model.save(m, function(err, m) {
+            if (err) cb(err);
+            else {
+              models.push(m);
+              cb();
+            }
+          });
         });
       }, done);
     });
 
+    after(function(done) {
+      async.each(models, function(m, cb) {
+        cm.model.destroy(m.id, m.rev, cb);
+      }, done);
+    });
+    
     it('should have the standard all view', function(done) {
       cm.view(layout.name, 'all', function(err, docs) {
         expect(err).to.not.exist;
@@ -160,7 +184,7 @@ describe('comodl', function() {
         expect(err).to.not.exist;
         expect(docs).to.be.a('array');
         expect(docs.length).to.equal(numModels);
-        expect(docs[0]).to.a('string');
+        expect(docs[0]).to.be.a('string');
         done();
       });
     });

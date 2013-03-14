@@ -6,9 +6,6 @@ var validate = require('jski');
 var emptyFunction = function() {};
 var deepClone = function(d) { return JSON.parse(JSON.stringify(d)); };
 
-// name property of layouts, that gets set on models when saved
-var layoutNameProp = 'type';
-
 
 module.exports = function(db) {
 
@@ -139,48 +136,34 @@ module.exports = function(db) {
   
 
   //
-  // create a model instance (layoutName, [data], [cb])
+  // create a model instance (type, [data], [cb])
   //
-  function createModel(layoutName, data, cb) {
+  function createModel(type, data, cb) {
     cb = cb || emptyFunction;
     if (_.isFunction(data)) {
       cb = data;
       data = null;
     }
     
-    if (!comodl.layouts[layoutName]) {
-      cb(new Error('No model layout found with name, '  + layoutName));
+    if (!comodl.layouts[type]) {
+      cb(new Error('No model layout found with type name, '  + type));
       return;
     }
-    var id = null,
-        rev = null;
 
-    if (data) {
-      // get id, rev from data when set
-      if (data._id) {
-        id = data._id;
-        rev = data._rev;
-      }
-      // cleanup data
-      delete data[layoutNameProp];
-      delete data._id;
-      delete data._rev;
-    }
-    
-    var m = {
-      layout: comodl.layouts[layoutName],
-      data: deepClone(data),
-      id: id,
-      rev: rev
+    var model = {
+      type: type,
+      data: null,
+      id: null,
+      rev: null
     };
 
     if (!data) {
-      cb(null, m);
-      return;
+      cb(null, model);
     }
-    else validateModel(m, function(err) {
-      cb(err, err ? null : m);
-    });
+    else {
+      setDataToModel(model, data);
+      validateModel(model, cb);
+    }
   }
 
 
@@ -195,14 +178,14 @@ module.exports = function(db) {
       return;
     }
     
-    var errs = validate(model.layout.schema, model.data);
+    var errs = validate(comodl.layouts[model.type].schema, model.data);
     if (errs) {
       var err = new Error('Validation failed.', errs);
       err.errors = errs;
       cb(err);
       return;
     }
-    cb();
+    cb(null, model);
   }
 
   
@@ -219,13 +202,9 @@ module.exports = function(db) {
       }
       // clone data before saving
       var data = deepClone(model.data);
-      if (model.id) {
-        // set id, rev for couchdb
-        data._id = model.id;
-        data._rev = model.rev;
-      }
-      // save name, to be able to infer the layout later
-      data[layoutNameProp] = model.layout.name;
+
+      addMetaDataFromModel(data, model);
+      
       db.insert(data, function(err, body) {
         if (!err) {
           model.id = body.id;
@@ -247,33 +226,56 @@ module.exports = function(db) {
         cb(err);
         return;
       }
-      var layoutName = doc[layoutNameProp];
-      if (!layoutName || !_.isString(layoutName)) {
-        cb(new Error('No valid layout name property on data with id, ' + id + '.'));
+      var type = doc.type;
+      if (!type || !_.isString(type)) {
+        cb(new Error('No valid type name on data with id, ' + id + '.'));
         return;
       }
-      var m = createModel(layoutName, doc, cb);
+      
+      var m = createModel(type, doc, function(err, model) {
+        if (err) cb(err);
+        else cb(err, err ? null : model);
+      });
     });
   }
 
 
   //
+  // move metadata from data to model and clone rest of data
+  //
+  function setDataToModel(model, data) {
+    if (data._id) {
+      model.id = data._id;
+      model.rev = data._rev;
+    }
+
+    // delete metadata when present
+    delete data._id;
+    delete data._rev;
+    delete data.type;
+
+    model.data = deepClone(data);
+  }
+
+  
+  //
+  // add metadata from model to doc
+  //
+  function addMetaDataFromModel(doc, model) {
+    if (model.id) {
+      doc._id = model.id;
+      doc._rev = model.rev;
+    }
+    doc.type = model.type;
+  }
+  
+
+  //
   // delete the model in the db
   //
-  function destroyModel(model, cb) {
+  function destroyModel(id, rev, cb) {
     cb = cb || emptyFunction;
-    
-    if (!model.id) {
-      cb();
-      return;
-    }
-    db.destroy(model.id, model.rev, function(err) {
-      if(!err) {
-        model.id = null;
-        model.rev = null;
-      }
-      cb(err);
-    });
+    db.destroy(id, rev, cb);
   }
 
   return comodl;
