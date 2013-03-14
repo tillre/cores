@@ -38,9 +38,9 @@ describe('comodl', function() {
     });
   });
 
-  // after(function(done) {
-  //   nano.db.destroy(dbName, done);
-  // });
+  after(function(done) {
+    nano.db.destroy(dbName, done);
+  });
 
 
   describe('layout', function() {
@@ -88,7 +88,7 @@ describe('comodl', function() {
     });
 
     it('should not save when not valid', function(done) {
-      cm.model.save(model, function(err) {
+      cm.model.save(model, function(err, model) {
         expect(err).to.exist;
         done();
       });
@@ -100,7 +100,12 @@ describe('comodl', function() {
     });
 
     it('should save when valid', function(done) {
-      cm.model.save(model, done);
+      cm.model.save(model, function(err, model) {
+        expect(err).to.not.exist;
+        expect(model).to.be.a('object');
+        expect(model.id).to.exist;
+        done();
+      });
     });
 
     it('should load', function(done) {

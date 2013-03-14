@@ -215,7 +215,7 @@ module.exports = function(db) {
           model.id = body.id;
           model.rev = body.rev;
         }
-        cb(err);
+        cb(err, err ? null : model);
       });
     });
   }
