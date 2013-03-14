@@ -108,6 +108,11 @@ describe('comodl', function() {
       });
     });
 
+    it('should save when updated', function(done) {
+      model.data.title = 'Some other title';
+      cm.model.save(model, done);
+    });
+
     it('should load', function(done) {
       cm.model.load(model.id, function(err, m2) {
         expect(err).to.not.exist;
