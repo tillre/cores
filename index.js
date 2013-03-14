@@ -55,6 +55,7 @@ module.exports = function(db) {
     }
     else {
       l.design.name = l.name.toLowerCase();
+      addStandardViews(l.design, name);
       // upload the design to the db
       syncDesign(l.design.name, design, function(err) {
         cb(err, err ? null : l);
@@ -62,6 +63,25 @@ module.exports = function(db) {
     }
   }
 
+
+  //
+  // add some standard views to the design when not present
+  //
+  function addStandardViews(design, name) {
+    design.views = design.views || {};
+    if (!design.views.all) {
+      design.views.all = {
+        // set map function as string, to hardcode the value of name into it
+        map: 'function(doc) { if (doc.type == \"' + name + '\") { emit(doc._id, doc); }}',
+        layout: function(cm, result, cb) {
+          cb(null, result.rows.map(function(doc) {
+            return doc.value;
+          }));
+        }
+      };
+    }
+  }
+  
 
   //
   // save/update the couchdb design doc

@@ -1,21 +1,18 @@
-var async = require('async');
-
 
 module.exports = {
 
   views: {
-    all: {
+    titles: {
+      params: {},
       map: function(doc) {
         if (doc.type === 'Article') {
-          emit(doc._id, doc);
+          emit(doc._id, doc.title);
         }
       },
       layout: function(cm, result, cb) {
-        async.map(result.rows,
-                  function(data, cb2) {
-                    cm.model.create('Article', data.value, cb2);
-                  },
-                  cb);
+        cb(null, result.rows.map(function(doc) {
+          return doc.value;
+        }));
       }
     }
   }

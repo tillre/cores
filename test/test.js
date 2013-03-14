@@ -38,9 +38,9 @@ describe('comodl', function() {
     });
   });
 
-  after(function(done) {
-    nano.db.destroy(dbName, done);
-  });
+  // after(function(done) {
+  //   nano.db.destroy(dbName, done);
+  // });
 
 
   describe('layout', function() {
@@ -133,11 +133,22 @@ describe('comodl', function() {
       }, done);
     });
 
-    it('should call the view', function(done) {
-      cm.view(layout.name, 'all', function(err, models) {
+    it('should have the standard all view', function(done) {
+      cm.view(layout.name, 'all', function(err, docs) {
         expect(err).to.not.exist;
-        expect(models).to.be.a('array');
-        expect(models.length).to.equal(numModels);
+        expect(docs).to.be.a('array');
+        expect(docs.length).to.equal(numModels);
+        expect(docs[0]).to.be.a('object');
+        done();
+      });
+    });
+
+    it('should call the custom view', function(done) {
+      cm.view(layout.name, 'titles', function(err, docs) {
+        expect(err).to.not.exist;
+        expect(docs).to.be.a('array');
+        expect(docs.length).to.equal(numModels);
+        expect(docs[0]).to.a('string');
         done();
       });
     });
