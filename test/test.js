@@ -112,7 +112,9 @@ describe('comodl', function() {
       cm.model.load(model.id, function(err, m2) {
         expect(err).to.not.exist;
         expect(m2).to.exist;
-        expect(JSON.stringify(m2.data) === JSON.stringify(model.data));
+        expect(m2.id).to.equal(model.id);
+        expect(m2.rev).to.equal(model.rev);
+        expect(JSON.stringify(m2.data)).to.equal(JSON.stringify(model.data));
         done();
       });
     });

@@ -152,17 +152,33 @@ module.exports = function(db) {
       cb(new Error('No model layout found with name, '  + layoutName));
       return;
     }
+    var id = null,
+        rev = null;
+
+    if (data) {
+      // get id, rev from data when set
+      if (data._id) {
+        id = data._id;
+        rev = data._rev;
+      }
+      // cleanup data
+      delete data[layoutNameProp];
+      delete data._id;
+      delete data._rev;
+    }
+    
     var m = {
       layout: comodl.layouts[layoutName],
       data: deepClone(data),
-      id: null,
-      rev: null
+      id: id,
+      rev: rev
     };
+
     if (!data) {
       cb(null, m);
       return;
     }
-    validateModel(m, function(err) {
+    else validateModel(m, function(err) {
       cb(err, err ? null : m);
     });
   }
@@ -204,7 +220,7 @@ module.exports = function(db) {
       // clone data before saving
       var data = deepClone(model.data);
       if (model.id) {
-        // set id and rev on data for couchdb
+        // set id, rev for couchdb
         data._id = model.id;
         data._rev = model.rev;
       }
