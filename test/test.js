@@ -19,7 +19,7 @@ describe('comodl', function() {
       db = nano.use(dbName),
       cm = comodl(db);
 
-  
+ 
   before(function(done) {
     // setup test db
     nano.db.get(dbName, function(err, body) {
@@ -77,13 +77,31 @@ describe('comodl', function() {
       layout = cm.layouts.Article;
     });
     
-    it('should create', function() {
+    it('should create with type', function() {
       model = cm.model.create(layout.name);
       expect(model).to.be.a('object');
       expect(model).to.have.property('type');
       expect(model).to.have.property('data');
       expect(model).to.have.property('id');
       expect(model).to.have.property('rev');
+    });
+
+    it('should create with type and data', function() {
+      var m = cm.model.create(layout.name, data);
+      expect(m).to.be.a('object');
+      expect(m.type).to.be.a('string');
+      expect(m.data).to.be.a('object');
+      expect(m.type).to.equal('Article');
+      expect(m.data.type).to.not.exist;
+    });
+
+    it('should create with data and data.type', function() {
+      var m = cm.model.create(data);
+      expect(m).to.be.a('object');
+      expect(m.type).to.be.a('string');
+      expect(m.data).to.be.a('object');
+      expect(m.type).to.equal('Article');
+      expect(m.data.type).to.not.exist;
     });
 
     it('should not be valid without data', function(done) {
@@ -101,7 +119,7 @@ describe('comodl', function() {
     });
     
     it('should be valid after setting data', function(done) {
-      model.data = data;
+      cm.model.setData(model, data);
       cm.model.validate(model, done);
     });
 
@@ -119,6 +137,9 @@ describe('comodl', function() {
       cm.model.save(model, function(err, m2) {
         expect(err).to.not.exist;
         expect(model.id).to.equal(m2.id);
+        expect(model.data._id).to.not.exist;
+        expect(model.data._rev).to.not.exist;
+        expect(model.data.type).to.not.exist;
         done();
       });
     });
@@ -180,6 +201,11 @@ describe('comodl', function() {
         expect(docs).to.be.a('array');
         expect(docs.length).to.equal(numModels);
         expect(docs[0]).to.be.a('object');
+
+        var model = cm.model.create(docs[0]);
+        expect(model).to.have.property('id');
+        expect(model).to.have.property('rev');
+        expect(model.data).to.be.a('object');
         done();
       });
     });

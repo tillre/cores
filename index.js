@@ -17,6 +17,7 @@ module.exports = function(db) {
     
     model: {
       create: createModel,
+      setData: setModelData,
       validate: validateModel,
       save: saveModel,
       load: loadModel,
@@ -140,7 +141,7 @@ module.exports = function(db) {
   //
   function createModel(type, data) {
     // allow passing just the data with a type property
-    if (_.isObject(type) && type.type) {
+    if (_.isObject(type)) {
       data = type;
       type = data.type;
     }
@@ -153,21 +154,29 @@ module.exports = function(db) {
     };
 
     if (data) {
-      // move metadata from data to model
-      if (data._id) {
-        model.id = data._id;
-        model.rev = data._rev;
-      }
-      // delete metadata when present
-      delete data._id;
-      delete data._rev;
-      delete data.type;
-
-      model.data = deepClone(data);
+      setModelData(model, data);
     }
     return model;
   }
 
+
+  //
+  // set data on model and move metadata to model
+  //
+  function setModelData(model, data) {
+    // move metadata from data to model
+    if (data._id) {
+      model.id = data._id;
+      model.rev = data._rev;
+    }
+    model.data = deepClone(data);
+
+    // delete metadata when present
+    delete model.data._id;
+    delete model.data._rev;
+    delete model.data.type;
+  }
+  
 
   //
   // validate a model
@@ -206,10 +215,14 @@ module.exports = function(db) {
         cb(err);
         return;
       }
-      // clone data before saving
       var data = deepClone(model.data);
 
-      addMetaDataFromModel(data, model);
+      // add meta data
+      if (model.id) {
+        data._id = model.id;
+        data._rev = model.rev;
+      }
+      data.type = model.type;
       
       db.insert(data, function(err, body) {
         if (!err) {
@@ -241,18 +254,6 @@ module.exports = function(db) {
       var m = createModel(type, doc);
       cb(null, m);
     });
-  }
-
-  
-  //
-  // add metadata from model to doc
-  //
-  function addMetaDataFromModel(doc, model) {
-    if (model.id) {
-      doc._id = model.id;
-      doc._rev = model.rev;
-    }
-    doc.type = model.type;
   }
   
 
