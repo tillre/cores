@@ -73,7 +73,8 @@ module.exports = function(db) {
         map: 'function(doc) { if (doc.type == \"' + name + '\") { emit(doc._id, doc); }}',
         layout: function(cm, result, cb) {
           cb(null, result.rows.map(function(doc) {
-            return cm.model.create(doc);
+            console.log('result doc', doc.value);
+            return cm.model.create(doc.value);
           }));
         }
       };

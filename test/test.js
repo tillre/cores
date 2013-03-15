@@ -202,10 +202,14 @@ describe('comodl', function() {
         expect(docs.length).to.equal(numModels);
         expect(docs[0]).to.be.a('object');
 
-        var model = cm.model.create(docs[0]);
+        var model = docs[0];
         expect(model).to.have.property('id');
         expect(model).to.have.property('rev');
+        expect(model).to.have.property('type');
         expect(model.data).to.be.a('object');
+        expect(model.data._id).to.not.exist;
+        expect(model.data._rev).to.not.exist;
+        expect(model.data.type).to.not.exist;
         done();
       });
     });
