@@ -72,7 +72,7 @@ module.exports = function(db) {
         map: 'function(doc) { if (doc.type == \"' + name + '\") { emit(doc._id, doc); }}',
         layout: function(cm, result, cb) {
           cb(null, result.rows.map(function(doc) {
-            return doc.value;
+            return cm.model.create(doc);
           }));
         }
       };
@@ -136,18 +136,13 @@ module.exports = function(db) {
   
 
   //
-  // create a model instance (type, [data], [cb])
+  // create a model instance (type, data)
   //
-  function createModel(type, data, cb) {
-    cb = cb || emptyFunction;
-    if (_.isFunction(data)) {
-      cb = data;
-      data = null;
-    }
-    
-    if (!comodl.layouts[type]) {
-      cb(new Error('No model layout found with type name, '  + type));
-      return;
+  function createModel(type, data) {
+    // allow passing just the data with a type property
+    if (_.isObject(type) && type.type) {
+      data = type;
+      type = data.type;
     }
 
     var model = {
@@ -157,13 +152,20 @@ module.exports = function(db) {
       rev: null
     };
 
-    if (!data) {
-      cb(null, model);
+    if (data) {
+      // move metadata from data to model
+      if (data._id) {
+        model.id = data._id;
+        model.rev = data._rev;
+      }
+      // delete metadata when present
+      delete data._id;
+      delete data._rev;
+      delete data.type;
+
+      model.data = deepClone(data);
     }
-    else {
-      setDataToModel(model, data);
-      validateModel(model, cb);
-    }
+    return model;
   }
 
 
@@ -175,6 +177,10 @@ module.exports = function(db) {
 
     if (!model.data || !_.isObject(model.data)) {
       cb(new Error('Cannot validate model with no data.'));
+      return;
+    }
+    if (!model.type || !comodl.layouts[model.type]) {
+      cb(new Error('Model type not known, ' + model.type));
       return;
     }
     
@@ -231,30 +237,10 @@ module.exports = function(db) {
         cb(new Error('No valid type name on data with id, ' + id + '.'));
         return;
       }
-      
-      var m = createModel(type, doc, function(err, model) {
-        if (err) cb(err);
-        else cb(err, err ? null : model);
-      });
+
+      var m = createModel(type, doc);
+      cb(null, m);
     });
-  }
-
-
-  //
-  // move metadata from data to model and clone rest of data
-  //
-  function setDataToModel(model, data) {
-    if (data._id) {
-      model.id = data._id;
-      model.rev = data._rev;
-    }
-
-    // delete metadata when present
-    delete data._id;
-    delete data._rev;
-    delete data.type;
-
-    model.data = deepClone(data);
   }
 
   

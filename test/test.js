@@ -50,6 +50,10 @@ describe('comodl', function() {
       cm.layout(layoutName, schema, design, function(err, l) {
         expect(l).to.exist;
         layout = l;
+        expect(layout).to.have.property('schema');
+        expect(layout).to.have.property('design');
+        expect(layout).to.have.property('name');
+        expect(layout).to.have.property('hooks');
         done(err);
       });
     });
@@ -73,11 +77,13 @@ describe('comodl', function() {
       layout = cm.layouts.Article;
     });
     
-    it('should create', function(done) {
-      cm.model.create(layout.name, function(err, m) {
-        model = m;
-        done(err);
-      });
+    it('should create', function() {
+      model = cm.model.create(layout.name);
+      expect(model).to.be.a('object');
+      expect(model).to.have.property('type');
+      expect(model).to.have.property('data');
+      expect(model).to.have.property('id');
+      expect(model).to.have.property('rev');
     });
 
     it('should not be valid without data', function(done) {
@@ -150,15 +156,14 @@ describe('comodl', function() {
       // depends on the layout tests
       layout = cm.layouts.Article;
       async.times(numModels, function(i, cb) {
-        cm.model.create(layout.name, data, function(err, m) {
-          m.data.title = m.data.title + ' ' + i;
-          cm.model.save(m, function(err, m) {
-            if (err) cb(err);
-            else {
-              models.push(m);
-              cb();
-            }
-          });
+        var m = cm.model.create(layout.name, data);
+        m.data.title = m.data.title + ' ' + i;
+        cm.model.save(m, function(err, m) {
+          if (err) cb(err);
+          else {
+            models.push(m);
+            cb();
+          }
         });
       }, done);
     });
