@@ -221,6 +221,22 @@ describe('comodl', function() {
         done();
       });
     });
+
+    it('should respond with error when view does not exist', function(done) {
+      cm.view(layout.name, 'foobar', function(err, docs) {
+        expect(err).to.exist;
+        expect(docs).to.not.exist;
+        done();
+      });
+    });
+
+    it('should call the view with params', function(done) {
+      cm.view(layout.name, 'titles', {limit: 2}, function(err, docs) {
+        expect(err).to.not.exist;
+        expect(docs.length).to.equal(2);
+        done();
+      });
+    });
   });
   
 });

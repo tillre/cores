@@ -137,8 +137,11 @@ module.exports = function(db) {
       cb(new Error('Layout not found with name, ' + layoutName + '.'));
       return;
     }
+    if (!layout.design.views[viewName]) {
+      cb(new Error('Layout view not found with name, ' + viewName + '.'));
+      return;
+    }
     var view = '_design/' + layout.design.name + '/_view/' + viewName;
-
     
     db.get(view, params, function(err, result) {
       if (err) cb(err);
