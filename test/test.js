@@ -3,7 +3,7 @@
 var expect = require('chai').expect;
 var async = require('async');
 var nano = require('nano')('http://localhost:5984');
-var comodl = require('../');
+var comodl = require('../index.js');
 
 
 describe('comodl', function() {
@@ -58,6 +58,14 @@ describe('comodl', function() {
       });
     });
 
+    it('should not create without properties property in schema', function(done) {
+      cm.layout('Foo', {}, design, function(err, l) {
+        expect(err).to.exist;
+        expect(l).to.not.exist;
+        done();
+      });
+    });
+
     it('should be registered', function() {
       expect(cm.layouts.Article).to.exist;
     });
@@ -68,9 +76,9 @@ describe('comodl', function() {
   });
 
   
-  describe('model', function() {
+  describe('doc', function() {
     var layout = null,
-        model = null;
+        doc = null;
 
     before(function() {
       // depends on the layout tests
@@ -78,89 +86,83 @@ describe('comodl', function() {
     });
     
     it('should create with type', function() {
-      model = cm.model.create(layout.name);
-      expect(model).to.be.a('object');
-      expect(model).to.have.property('type');
-      expect(model).to.have.property('data');
-      expect(model).to.have.property('id');
-      expect(model).to.have.property('rev');
+      doc = cm.model.create(layout.name);
+      expect(doc).to.be.a('object');
+      expect(doc).to.have.property('type');
     });
 
     it('should create with type and data', function() {
-      var m = cm.model.create(layout.name, data);
-      expect(m).to.be.a('object');
-      expect(m.type).to.be.a('string');
-      expect(m.data).to.be.a('object');
-      expect(m.type).to.equal('Article');
-      expect(m.data.type).to.not.exist;
+      var d = cm.model.create(layout.name, data);
+      expect(d).to.be.a('object');
+      expect(d.type).to.be.a('string');
+      expect(d.type).to.equal('Article');
     });
 
     it('should create with data and data.type', function() {
-      var m = cm.model.create(data);
-      expect(m).to.be.a('object');
-      expect(m.type).to.be.a('string');
-      expect(m.data).to.be.a('object');
-      expect(m.type).to.equal('Article');
-      expect(m.data.type).to.not.exist;
+      var d = cm.model.create(data);
+      expect(d).to.be.a('object');
+      expect(d.type).to.be.a('string');
+      expect(d.type).to.equal('Article');
     });
 
     it('should not be valid without data', function(done) {
-      cm.model.validate(model, function(err) {
+      cm.model.validate(doc, function(err) {
         expect(err).to.exist;
         done();
       });
     });
 
     it('should not save when not valid', function(done) {
-      cm.model.save(model, function(err, model) {
+      cm.model.save(doc, function(err, savedDoc) {
         expect(err).to.exist;
+        expect(savedDoc).to.not.exist;
         done();
       });
     });
     
     it('should be valid after setting data', function(done) {
-      cm.model.setData(model, data);
-      cm.model.validate(model, done);
+      doc = cm.model.update(doc, data);
+      cm.model.validate(doc, done);
     });
 
     it('should save when valid', function(done) {
-      cm.model.save(model, function(err, model) {
+      cm.model.save(doc, function(err, doc) {
         expect(err).to.not.exist;
-        expect(model).to.be.a('object');
-        expect(model.id).to.exist;
+        expect(doc).to.be.a('object');
+        expect(doc).to.have.property('_id');
+        expect(doc).to.have.property('_rev');
         done();
       });
     });
 
     it('should save when updated', function(done) {
-      model.data.title = 'Some other title';
-      cm.model.save(model, function(err, m2) {
+      doc.title = 'Some other title';
+      var id = doc._id;
+      var rev = doc._rev;
+      cm.model.save(doc, function(err, d) {
         expect(err).to.not.exist;
-        expect(model.id).to.equal(m2.id);
-        expect(model.data._id).to.not.exist;
-        expect(model.data._rev).to.not.exist;
-        expect(model.data.type).to.not.exist;
+        expect(d._id).to.equal(id);
+        expect(d._rev).to.not.equal(rev);
+        doc = d;
         done();
       });
     });
 
     it('should load', function(done) {
-      cm.model.load(model.id, function(err, m2) {
+      cm.model.load(doc._id, function(err, d) {
         expect(err).to.not.exist;
-        expect(m2).to.exist;
-        expect(m2.id).to.equal(model.id);
-        expect(m2.rev).to.equal(model.rev);
-        expect(JSON.stringify(m2.data)).to.equal(JSON.stringify(model.data));
+        expect(d).to.exist;
+        expect(d._id).to.equal(doc._id);
         done();
       });
     });
 
     it('should destroy', function(done) {
-      var id = model.id;
-      cm.model.destroy(model.id, model.rev, function(err) {
-        cm.model.load(id, function(err, model) {
+      var id = doc._id;
+      cm.model.destroy(doc._id, doc._rev, function(err) {
+        cm.model.load(id, function(err, d) {
           expect(err).to.exist;
-          expect(model).to.not.exist;
+          expect(d).to.not.exist;
           done();
         });
       });
@@ -170,19 +172,19 @@ describe('comodl', function() {
   
   describe('layout views', function() {
     var layout = null,
-        models = [];
-        numModels = 3;
+        docs = [],
+        numDocs = 3;
 
     before(function(done) {
       // depends on the layout tests
       layout = cm.layouts.Article;
-      async.times(numModels, function(i, cb) {
-        var m = cm.model.create(layout.name, data);
-        m.data.title = m.data.title + ' ' + i;
-        cm.model.save(m, function(err, m) {
+      async.times(numDocs, function(i, cb) {
+        var d = cm.model.create(layout.name, data);
+        d.title = d.title + ' ' + i;
+        cm.model.save(d, function(err, m) {
           if (err) cb(err);
           else {
-            models.push(m);
+            docs.push(d);
             cb();
           }
         });
@@ -190,8 +192,8 @@ describe('comodl', function() {
     });
 
     after(function(done) {
-      async.each(models, function(m, cb) {
-        cm.model.destroy(m.id, m.rev, cb);
+      async.each(docs, function(d, cb) {
+        cm.model.destroy(d._id, d._rev, cb);
       }, done);
     });
     
@@ -199,17 +201,13 @@ describe('comodl', function() {
       cm.view(layout.name, 'all', function(err, docs) {
         expect(err).to.not.exist;
         expect(docs).to.be.a('array');
-        expect(docs.length).to.equal(numModels);
+        expect(docs.length).to.equal(numDocs);
         expect(docs[0]).to.be.a('object');
 
-        var model = docs[0];
-        expect(model).to.have.property('id');
-        expect(model).to.have.property('rev');
-        expect(model).to.have.property('type');
-        expect(model.data).to.be.a('object');
-        expect(model.data._id).to.not.exist;
-        expect(model.data._rev).to.not.exist;
-        expect(model.data.type).to.not.exist;
+        var doc = docs[0];
+        expect(doc).to.have.property('_id');
+        expect(doc).to.have.property('_rev');
+        expect(doc).to.have.property('type');
         done();
       });
     });
@@ -218,7 +216,7 @@ describe('comodl', function() {
       cm.view(layout.name, 'titles', function(err, docs) {
         expect(err).to.not.exist;
         expect(docs).to.be.a('array');
-        expect(docs.length).to.equal(numModels);
+        expect(docs.length).to.equal(numDocs);
         expect(docs[0]).to.be.a('string');
         done();
       });

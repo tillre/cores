@@ -7,6 +7,7 @@ var emptyFunction = function() {};
 var deepClone = function(d) { return JSON.parse(JSON.stringify(d)); };
 
 
+
 module.exports = function(db) {
 
   var comodl = {
@@ -16,18 +17,18 @@ module.exports = function(db) {
     view: callView,
     
     model: {
-      create: createModel,
-      setData: setModelData,
-      validate: validateModel,
-      save: saveModel,
-      load: loadModel,
-      destroy: destroyModel
+      create: createDoc,
+      update: updateDoc,
+      validate: validateDoc,
+      save: saveDoc,
+      load: loadDoc,
+      destroy: destroyDoc
     }
   };
 
   
   //
-  // create a model layout (schema, design, [hooks], [cb])
+  // create a doc layout (schema, design, [hooks], [cb])
   //
   function createLayout(name, schema, design, hooks, cb) {
     cb = cb || emptyFunction;
@@ -41,12 +42,25 @@ module.exports = function(db) {
       return;
     }
 
+    if (!schema.properties) {
+      cb(new Error('Schema should be of type "object" and must have a "properties" property.'));
+      return;
+    }
+
+    // add _id, _rev and type to schema
+    _.extend(schema.properties, {
+      _id: { type: 'string' },
+      _rev: { type: 'string' },
+      type: { type: 'string' }
+    });
+
     var l = {
       schema: schema,
       design: design,
       name: name,
       hooks: hooks || {} // TODO: implement hooks
     };
+
     comodl.layouts[l.name] = l;
     if (!l.design) {
       cb(null, l);
@@ -137,131 +151,108 @@ module.exports = function(db) {
   
 
   //
-  // create a model instance (type, data)
+  // create a doc instance (type, data)
   //
-  function createModel(type, data) {
+  function createDoc(type, data) {
     // allow passing just the data with a type property
     if (_.isObject(type)) {
       data = type;
       type = data.type;
     }
-
-    var model = {
-      type: type,
-      data: null,
-      id: null,
-      rev: null
+    var doc = {
+      type: type
     };
-
-    if (data) {
-      setModelData(model, data);
-    }
-    return model;
+    _.extend(doc, data);
+    return doc;
   }
 
 
   //
-  // set data on model and move metadata to model
+  // create a new doc from old doc with data
   //
-  function setModelData(model, data) {
-    // move metadata from data to model
-    if (data._id) {
-      model.id = data._id;
-      model.rev = data._rev;
+  function updateDoc(doc, data) {
+    var newDoc = deepClone(data);
+    if (doc._id) {
+      newDoc._id = doc._id;
+      newDoc._rev = doc._rev;
     }
-    model.data = deepClone(data);
-
-    // delete metadata when present
-    delete model.data._id;
-    delete model.data._rev;
-    delete model.data.type;
+    newDoc.type = doc.type;
+    return newDoc;
   }
   
 
   //
-  // validate a model
+  // validate a doc
   //
-  function validateModel(model, cb) {
+  function validateDoc(doc, cb) {
     cb = cb || emptyFunction;
 
-    if (!model.data || !_.isObject(model.data)) {
-      cb(new Error('Cannot validate model with no data.'));
+    if (!doc.type || !comodl.layouts[doc.type]) {
+      cb(new Error('Unknown doc type: ' + doc.type));
       return;
     }
-    if (!model.type || !comodl.layouts[model.type]) {
-      cb(new Error('Model type not known, ' + model.type));
-      return;
-    }
-    
-    var errs = validate(comodl.layouts[model.type].schema, model.data);
+    var schema = comodl.layouts[doc.type].schema;
+    var errs = validate(comodl.layouts[doc.type].schema, doc);
     if (errs) {
       var err = new Error('Validation failed.', errs);
       err.errors = errs;
       cb(err);
       return;
     }
-    cb(null, model);
+    cb(null, doc);
   }
 
   
   //
-  // save a model to the db
+  // save a doc to the db
   //
-  function saveModel(model, cb) {
+  function saveDoc(doc, cb) {
     cb = cb || emptyFunction;
     // always validate before saving
-    validateModel(model, function(err) {
+    validateDoc(doc, function(err) {
       if (err) {
         cb(err);
         return;
       }
-      var data = deepClone(model.data);
-
-      // add meta data
-      if (model.id) {
-        data._id = model.id;
-        data._rev = model.rev;
-      }
-      data.type = model.type;
-      
-      db.insert(data, function(err, body) {
+      db.insert(doc, function(err, body) {
         if (!err) {
-          model.id = body.id;
-          model.rev = body.rev;
+          doc._id = body.id;
+          doc._rev = body.rev;
         }
-        cb(err, err ? null : model);
+        cb(null, doc);
       });
     });
   }
 
   
   //
-  // load a model from the db
+  // load a doc from the db
   //
-  function loadModel(id, cb) {
+  function loadDoc(id, cb) {
     cb = cb || emptyFunction;
     db.get(id, function(err, doc) {
       if (err) {
         cb(err);
         return;
       }
-      var type = doc.type;
-      if (!type || !_.isString(type)) {
+      if (!doc.type || !_.isString(doc.type)) {
         cb(new Error('No valid type name on data with id, ' + id + '.'));
         return;
       }
-
-      var m = createModel(type, doc);
-      cb(null, m);
+      cb(null, doc);
     });
   }
   
 
   //
-  // delete the model in the db
+  // delete the doc in the db
   //
-  function destroyModel(id, rev, cb) {
+  function destroyDoc(id, rev, cb) {
     cb = cb || emptyFunction;
+    if (!id || !rev) {
+      cb(new Error('Destroy needs an id and rev.'));
+      return;
+    }
     db.destroy(id, rev, cb);
   }
 
