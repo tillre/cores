@@ -32,9 +32,16 @@ module.exports = function(db) {
   //
   function createLayout(name, schema, design, hooks, cb) {
     cb = cb || emptyFunction;
-    if (_.isFunction(hooks)) {
+    // (name, schema, cb)
+    if (arguments.length === 3) {
+      cb = design;
+      design = {};
+      hooks = {};
+    }
+    // (name, schema, design, cb)
+    if (arguments.length === 4) {
       cb = hooks;
-      hooks = null;
+      hooks = {};
     }
     
     if (comodl.layouts[name]) {
@@ -58,21 +65,17 @@ module.exports = function(db) {
       schema: schema,
       design: design,
       name: name,
-      hooks: hooks || {} // TODO: implement hooks
+      hooks: hooks // TODO: implement hooks
     };
 
     comodl.layouts[l.name] = l;
-    if (!l.design) {
-      cb(null, l);
-    }
-    else {
-      l.design.name = l.name.toLowerCase();
-      addStandardViews(l.design, name);
-      // upload the design to the db
-      syncDesign(l.design.name, design, function(err) {
-        cb(err, err ? null : l);
-      });
-    }
+
+    l.design.name = l.name.toLowerCase();
+    addStandardViews(l.design, name);
+    // upload the design to the db
+    syncDesign(design, function(err) {
+      cb(err, err ? null : l);
+    });
   }
 
 
@@ -98,10 +101,10 @@ module.exports = function(db) {
   //
   // save/update the couchdb design doc
   //
-  function syncDesign(name, design, cb) {
+  function syncDesign(design, cb) {
     cb = cb || emptyFunction;
 
-    design._id = '_design/' + name;
+    design._id = '_design/' + design.name;
     
     // check for existing design
     db.get(design._id, function(err, doc) {

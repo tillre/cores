@@ -46,7 +46,7 @@ describe('comodl', function() {
   describe('layout', function() {
     var layout = null;
     
-    it('should create', function(done) {
+    it('should create with schema and design', function(done) {
       cm.layout(layoutName, schema, design, function(err, l) {
         expect(l).to.exist;
         layout = l;
@@ -62,6 +62,15 @@ describe('comodl', function() {
       cm.layout('Foo', {}, design, function(err, l) {
         expect(err).to.exist;
         expect(l).to.not.exist;
+        done();
+      });
+    });
+
+    it('should auto create design when not passed', function(done) {
+      cm.layout('Bar', schema, function(err, l) {
+        expect(err).to.not.exist;
+        expect(l).to.exist;
+        expect(l.design.views.all).to.exist;
         done();
       });
     });
