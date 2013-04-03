@@ -2,6 +2,8 @@ var _ = require('underscore');
 var nano = require('nano')('http://localhost:5984');
 var validate = require('jski');
 
+var modelSchema = require('./lib/model-schema');
+var designSchema = require('./lib/design-schema');
 
 var emptyFunction = function() {};
 var deepClone = function(d) { return JSON.parse(JSON.stringify(d)); };
@@ -31,28 +33,50 @@ module.exports = function(db) {
   // create a doc layout (schema, design, [hooks], [cb])
   //
   function createLayout(name, schema, design, hooks, cb) {
-    cb = cb || emptyFunction;
+    design = design || {};
+    hooks = hooks || {};
     // (name, schema, cb)
     if (arguments.length === 3) {
       cb = design;
       design = {};
-      hooks = {};
     }
     // (name, schema, design, cb)
     if (arguments.length === 4) {
       cb = hooks;
-      hooks = {};
     }
+    cb = cb || emptyFunction;
     
     if (comodl.layouts[name]) {
       cb(new Error('Layout name ' + schema.name + ' already taken.'));
       return;
     }
 
-    if (!schema.properties) {
-      cb(new Error('Schema should be of type "object" and must have a "properties" property.'));
+    var err, errors;
+    
+    // validate schema against model schema
+    errors = validate(modelSchema, schema);
+    if (errors) {
+      err = new Error('Schema does not validate');
+      err.errors = errors;
+      cb(err);
       return;
     }
+
+    // validate design against design schema
+    if (design) {
+      errors = validate(designSchema, design);
+      if (errors) {
+        err = new Error('Design does not validate');
+        err.errors = errors;
+        cb(err);
+        return;
+      }
+    }
+    
+    // if (!schema.properties) {
+    //   cb(new Error('Schema should be of type "object" and must have a "properties" property.'));
+    //   return;
+    // }
 
     // add _id, _rev and type to schema
     _.extend(schema.properties, {

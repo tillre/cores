@@ -58,16 +58,26 @@ describe('comodl', function() {
       });
     });
 
-    it('should not create without properties property in schema', function(done) {
-      cm.layout('Foo', {}, design, function(err, l) {
+    it('should not create with invalid schema', function(done) {
+      cm.layout('Foo', {bar:42}, design, function(err, l) {
         expect(err).to.exist;
+        expect(err.errors).to.be.a('array');
         expect(l).to.not.exist;
         done();
       });
     });
 
+    it('should not create with invalid design', function(done) {
+      cm.layout('Bar', schema, {views:''}, function(err, l) {
+        expect(err).to.exist;
+        expect(err.errors).to.be.a('array');
+        expect(l).to.not.exist;
+        done();
+      });
+    });
+    
     it('should auto create design when not passed', function(done) {
-      cm.layout('Bar', schema, function(err, l) {
+      cm.layout('Baz', schema, function(err, l) {
         expect(err).to.not.exist;
         expect(l).to.exist;
         expect(l.design.views.all).to.exist;
