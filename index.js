@@ -1,4 +1,5 @@
 var _ = require('underscore');
+var i = require('i')();
 var nano = require('nano')('http://localhost:5984');
 var validate = require('jski');
 
@@ -20,7 +21,7 @@ module.exports = function(db) {
     
     model: {
       create: createDoc,
-      update: updateDoc,
+      setData: setDocData,
       validate: validateDoc,
       save: saveDoc,
       load: loadDoc,
@@ -30,19 +31,14 @@ module.exports = function(db) {
 
   
   //
-  // create a doc layout (schema, design, [hooks], [cb])
+  // create a doc layout (schema, design, [cb])
   //
-  function createLayout(name, schema, design, hooks, cb) {
+  function createLayout(name, schema, design, cb) {
     design = design || {};
-    hooks = hooks || {};
     // (name, schema, cb)
     if (arguments.length === 3) {
       cb = design;
       design = {};
-    }
-    // (name, schema, design, cb)
-    if (arguments.length === 4) {
-      cb = hooks;
     }
     cb = cb || emptyFunction;
     
@@ -63,21 +59,14 @@ module.exports = function(db) {
     }
 
     // validate design against design schema
-    if (design) {
-      errors = validate(designSchema, design);
-      if (errors) {
-        err = new Error('Design does not validate');
-        err.errors = errors;
-        cb(err);
-        return;
-      }
+    errors = validate(designSchema, design);
+    if (errors) {
+      err = new Error('Design does not validate');
+      err.errors = errors;
+      cb(err);
+      return;
     }
     
-    // if (!schema.properties) {
-    //   cb(new Error('Schema should be of type "object" and must have a "properties" property.'));
-    //   return;
-    // }
-
     // add _id, _rev and type to schema
     _.extend(schema.properties, {
       _id: { type: 'string' },
@@ -89,9 +78,15 @@ module.exports = function(db) {
       schema: schema,
       design: design,
       name: name,
-      hooks: hooks // TODO: implement hooks
+      path: '/' + i.pluralize(name.toLowerCase()),
+      viewPaths: {}
     };
 
+    // create view paths
+    _.each(design.views, function(view, viewName) {
+      l.viewPaths[viewName] = '/' + name.toLowerCase() + '-' + viewName.toLowerCase();
+    });
+    
     comodl.layouts[l.name] = l;
 
     l.design.name = l.name.toLowerCase();
@@ -161,11 +156,15 @@ module.exports = function(db) {
     
     var layout = comodl.layouts[layoutName];
     if (!layout)  {
-      cb(new Error('Layout not found with name, ' + layoutName + '.'));
+      var err = new Error('Layout not found with name, ' + layoutName + '.');
+      err.code = 404;
+      cb(err);
       return;
     }
     if (!layout.design.views[viewName]) {
-      cb(new Error('Layout view not found with name, ' + viewName + '.'));
+      var err = new Error('Layout view not found with name, ' + viewName + '.');
+      err.code = 404;
+      cb(err);
       return;
     }
     var view = '_design/' + layout.design.name + '/_view/' + viewName;
@@ -200,7 +199,7 @@ module.exports = function(db) {
   //
   // create a new doc from old doc with data
   //
-  function updateDoc(doc, data) {
+  function setDocData(doc, data) {
     var newDoc = deepClone(data);
     if (doc._id) {
       newDoc._id = doc._id;
@@ -218,15 +217,18 @@ module.exports = function(db) {
     cb = cb || emptyFunction;
 
     if (!doc.type || !comodl.layouts[doc.type]) {
-      cb(new Error('Unknown doc type: ' + doc.type));
+      var uErr = new Error('Unknown doc type: ' + doc.type);
+      uErr.code = 400;
+      cb(uErr);
       return;
     }
     var schema = comodl.layouts[doc.type].schema;
     var errs = validate(comodl.layouts[doc.type].schema, doc);
     if (errs) {
-      var err = new Error('Validation failed.', errs);
-      err.errors = errs;
-      cb(err);
+      var valErr = new Error('Validation failed', errs);
+      valErr.code = 400;
+      valErr.errors = errs;
+      cb(valErr);
       return;
     }
     cb(null, doc);
@@ -266,7 +268,9 @@ module.exports = function(db) {
         return;
       }
       if (!doc.type || !_.isString(doc.type)) {
-        cb(new Error('No valid type name on data with id, ' + id + '.'));
+        var typeErr = new Error('No valid type name on data with id, ' + id + '.');
+        typeErr.code = 400;
+        cb(typeErr);
         return;
       }
       cb(null, doc);
@@ -280,7 +284,9 @@ module.exports = function(db) {
   function destroyDoc(id, rev, cb) {
     cb = cb || emptyFunction;
     if (!id || !rev) {
-      cb(new Error('Destroy needs an id and rev.'));
+      var err = new Error('Destroy needs an id and rev.');
+      err.code = 400;
+      cb(err);
       return;
     }
     db.destroy(id, rev, cb);

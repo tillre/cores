@@ -10,11 +10,11 @@
   "repository": "",
   "author": "",
   "license": "BSD",
-
   "dependencies": {
     "underscore": "1.4.x",
     "nano": "3.x.x",
-    "async": "0.2.x"
+    "async": "0.2.x",
+    "i": "~0.3.1"
   },
   "devDependencies": {
     "mocha": "1.x.x",

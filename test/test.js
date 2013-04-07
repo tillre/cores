@@ -53,7 +53,6 @@ describe('comodl', function() {
         expect(layout).to.have.property('schema');
         expect(layout).to.have.property('design');
         expect(layout).to.have.property('name');
-        expect(layout).to.have.property('hooks');
         done(err);
       });
     });
@@ -140,7 +139,7 @@ describe('comodl', function() {
     });
     
     it('should be valid after setting data', function(done) {
-      doc = cm.model.update(doc, data);
+      doc = cm.model.setData(doc, data);
       cm.model.validate(doc, done);
     });
 
