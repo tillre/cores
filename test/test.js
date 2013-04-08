@@ -15,7 +15,7 @@ describe('comodl', function() {
       data = require('./data');
 
   // create db before tests and destroy afterwards
-  var dbName = 'comodl-test',
+  var dbName = 'test-comodl',
       db = nano.use(dbName),
       cm = comodl(db);
 
