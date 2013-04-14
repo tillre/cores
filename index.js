@@ -1,5 +1,4 @@
 var _ = require('underscore');
-var i = require('i')();
 var nano = require('nano')('http://localhost:5984');
 var validate = require('jski');
 
@@ -79,22 +78,14 @@ module.exports = function(db) {
     design.schema = schema;
     
     var l = {
-      // schema: schema,
       design: design,
-      name: name,
-      path: '/' + i.pluralize(name.toLowerCase()),
-      viewPaths: {}
+      name: name
     };
 
     comodl.layouts[l.name] = l;
 
     l.design.name = l.name.toLowerCase();
     addStandardViews(l.design, name);
-
-    // create view paths
-    _.each(design.views, function(view, viewName) {
-      l.viewPaths[viewName] = '/' + name.toLowerCase() + '-' + viewName.toLowerCase();
-    });
 
     // upload the design to the db
     syncDesign(l, function(err) {
