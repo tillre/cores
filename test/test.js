@@ -50,8 +50,8 @@ describe('comodl', function() {
       cm.layout(layoutName, schema, design, function(err, l) {
         expect(l).to.exist;
         layout = l;
-        expect(layout).to.have.property('schema');
         expect(layout).to.have.property('design');
+        expect(layout.design).to.have.property('schema');
         expect(layout).to.have.property('name');
         done(err);
       });
@@ -88,8 +88,14 @@ describe('comodl', function() {
       expect(cm.layouts.Article).to.exist;
     });
 
-    it('should be in the db', function(done) {
-      db.get('_design/' + layout.design.name, done);
+    it('should upload design and schema to the db', function(done) {
+      db.get('_design/' + layout.design.name, function(err, doc) {
+        expect(err).to.not.exist;
+        expect(doc.views).to.be.a('object');
+        expect(doc.views.all).to.be.a('object');
+        expect(doc.schema).to.be.a('object');
+        done();
+      });
     });
   });
 

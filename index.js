@@ -31,16 +31,17 @@ module.exports = function(db) {
 
   
   //
-  // create a doc layout (schema, design, [callback])
+  // create a doc layout (name, schema, [design], [callback])
   //
   function createLayout(name, schema, design, callback) {
     design = design || {};
-    // (name, schema, callback)
-    if (arguments.length === 3) {
+
+    if (arguments.length === 3 && _.isFunction(design)) {
       callback = design;
       design = {};
     }
     callback = callback || emptyFunction;
+
     
     if (comodl.layouts[name]) {
       callback(new Error('Layout name ' + schema.name + ' already taken.'));
@@ -74,8 +75,11 @@ module.exports = function(db) {
       type: { type: 'string' }
     });
 
+    // put schema on design
+    design.schema = schema;
+    
     var l = {
-      schema: schema,
+      // schema: schema,
       design: design,
       name: name,
       path: '/' + i.pluralize(name.toLowerCase()),
@@ -93,7 +97,7 @@ module.exports = function(db) {
     });
 
     // upload the design to the db
-    syncDesign(design, function(err) {
+    syncDesign(l, function(err) {
       callback(err, err ? null : l);
     });
   }
@@ -119,28 +123,25 @@ module.exports = function(db) {
   
 
   //
-  // save/update the couchdb design doc
+  // save/update design with schema in db
   //
-  function syncDesign(design, callback) {
+  function syncDesign(layout, callback) {
     callback = callback || emptyFunction;
 
-    design._id = '_design/' + design.name;
-    
-    // check for existing design
-    db.get(design._id, function(err, doc) {
+    var id = '_design/' + layout.design.name;
+    layout.design._id = id;
+
+    db.get(id, function(err, doc) {
       if (err && err.error === 'not_found') {
-        // initial upload of design
-        db.insert(design, callback);
-        return;
+        // inital upload
+        return db.insert(layout.design, callback);
       }
       if (err) {
-        callback(err);
-        return;
+        return callback(err);
       }
-      // update design
-      // TODO: update only if changed, put timestamp on design doc
-      design._rev = doc._rev;
-      db.insert(design, callback);
+      // update
+      layout.design._rev = doc._rev;
+      db.insert(layout.design, callback);
     });
   }
 
@@ -224,8 +225,8 @@ module.exports = function(db) {
       callback(uErr);
       return;
     }
-    var schema = comodl.layouts[doc.type].schema;
-    var errs = validate(comodl.layouts[doc.type].schema, doc);
+    var schema = comodl.layouts[doc.type].design.schema;
+    var errs = validate(schema, doc);
     if (errs) {
       var valErr = new Error('Validation failed', errs);
       valErr.code = 400;
