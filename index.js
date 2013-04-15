@@ -43,8 +43,7 @@ module.exports = function(db) {
 
     
     if (comodl.layouts[name]) {
-      callback(new Error('Layout name ' + schema.name + ' already taken.'));
-      return;
+      return callback(new Error('Layout name ' + schema.name + ' already taken.'));
     }
 
     var err, errors;
@@ -54,8 +53,7 @@ module.exports = function(db) {
     if (errors) {
       err = new Error('Schema does not validate');
       err.errors = errors;
-      callback(err);
-      return;
+      return callback(err);
     }
 
     // validate design against design schema
@@ -63,8 +61,7 @@ module.exports = function(db) {
     if (errors) {
       err = new Error('Design does not validate');
       err.errors = errors;
-      callback(err);
-      return;
+      return callback(err);
     }
     
     // add _id, _rev and type to schema
@@ -148,18 +145,19 @@ module.exports = function(db) {
     }
     
     var layout = comodl.layouts[layoutName];
+
     if (!layout)  {
       var err = new Error('Layout not found with name, ' + layoutName + '.');
       err.code = 404;
-      callback(err);
-      return;
+      return callback(err);
     }
+    
     if (!layout.design.views[viewName]) {
       var err = new Error('Layout view not found with name, ' + viewName + '.');
       err.code = 404;
-      callback(err);
-      return;
+      return callback(err);
     }
+
     var view = '_design/' + layout.design.name + '/_view/' + viewName;
     
     db.get(view, params, function(err, result) {
@@ -213,17 +211,16 @@ module.exports = function(db) {
     if (!doc.type || !comodl.layouts[doc.type]) {
       var uErr = new Error('Unknown doc type: ' + doc.type);
       uErr.code = 400;
-      callback(uErr);
-      return;
+      return callback(uErr);
     }
+
     var schema = comodl.layouts[doc.type].design.schema;
     var errs = validate(schema, doc);
     if (errs) {
       var valErr = new Error('Validation failed', errs);
       valErr.code = 400;
       valErr.errors = errs;
-      callback(valErr);
-      return;
+      return callback(valErr);
     }
     callback(null, doc);
   }
@@ -236,16 +233,15 @@ module.exports = function(db) {
     callback = callback || emptyFunction;
     // always validate before saving
     validateDoc(doc, function(err) {
-      if (err) {
-        callback(err);
-        return;
-      }
+
+      if (err) return callback(err);
+
       db.insert(doc, function(err, body) {
         if (!err) {
           doc._id = body.id;
           doc._rev = body.rev;
         }
-        callback(null, doc);
+        callback(err, doc);
       });
     });
   }
@@ -256,16 +252,15 @@ module.exports = function(db) {
   //
   function loadDoc(id, callback) {
     callback = callback || emptyFunction;
+
     db.get(id, function(err, doc) {
-      if (err) {
-        callback(err);
-        return;
-      }
+
+      if (err) return callback(err);
+
       if (!doc.type || !_.isString(doc.type)) {
         var typeErr = new Error('No valid type name on data with id, ' + id + '.');
         typeErr.code = 400;
-        callback(typeErr);
-        return;
+        return callback(typeErr);
       }
       callback(null, doc);
     });
@@ -277,11 +272,11 @@ module.exports = function(db) {
   //
   function destroyDoc(id, rev, callback) {
     callback = callback || emptyFunction;
+
     if (!id || !rev) {
       var err = new Error('Destroy needs an id and rev.');
       err.code = 400;
-      callback(err);
-      return;
+      return callback(err);
     }
     db.destroy(id, rev, callback);
   }
