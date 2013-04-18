@@ -12,6 +12,7 @@ describe('comodl', function() {
   var layoutName = 'Article',
       schema = require('./schema'),
       design = require('./design'),
+      hooks = require('./hooks'),
       data = require('./data');
 
   // create db before tests and destroy afterwards
@@ -47,7 +48,7 @@ describe('comodl', function() {
     var layout = null;
     
     it('should create with schema and design', function(done) {
-      cm.layout(layoutName, schema, design, function(err, l) {
+      cm.layout(layoutName, { schema: schema, design: design, hooks: hooks(cm) }, function(err, l) {
         expect(l).to.exist;
         layout = l;
         expect(layout).to.have.property('design');
@@ -58,7 +59,7 @@ describe('comodl', function() {
     });
 
     it('should not create with invalid schema', function(done) {
-      cm.layout('Foo', {bar:42}, design, function(err, l) {
+      cm.layout('Foo', { schema: {bar:42}, design: design }, function(err, l) {
         expect(err).to.exist;
         expect(err.errors).to.be.a('array');
         expect(l).to.not.exist;
@@ -67,7 +68,7 @@ describe('comodl', function() {
     });
 
     it('should not create with invalid design', function(done) {
-      cm.layout('Bar', schema, {views:''}, function(err, l) {
+      cm.layout('Bar', { schema: schema, design: {views:''} }, function(err, l) {
         expect(err).to.exist;
         expect(err.errors).to.be.a('array');
         expect(l).to.not.exist;
@@ -76,7 +77,7 @@ describe('comodl', function() {
     });
     
     it('should auto create design when not passed', function(done) {
-      cm.layout('Baz', schema, function(err, l) {
+      cm.layout('Baz', { schema: schema }, function(err, l) {
         expect(err).to.not.exist;
         expect(l).to.exist;
         expect(l.design.views.all).to.exist;
@@ -181,6 +182,14 @@ describe('comodl', function() {
       });
     });
 
+    it('should have the prop from the save hook', function(done) {
+      cm.model.load(doc._id, function(err, d) {
+        expect(err).to.not.exist;
+        expect(d.hooky).to.equal('Added in hook');
+        done();
+      });
+    });
+    
     it('should destroy', function(done) {
       var id = doc._id;
       cm.model.destroy(doc._id, doc._rev, function(err) {

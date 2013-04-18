@@ -9,7 +9,6 @@ var emptyFunction = function() {};
 var deepClone = function(d) { return JSON.parse(JSON.stringify(d)); };
 
 
-
 module.exports = function(db) {
 
   var comodl = {
@@ -28,28 +27,31 @@ module.exports = function(db) {
     }
   };
 
+
+  //
+  // create a doc layout, config: { schema, design }
+  //
   
-  //
-  // create a doc layout (name, schema, [design], [callback])
-  //
-  function createLayout(name, schema, design, callback) {
-    design = design || {};
-
-    if (arguments.length === 3 && _.isFunction(design)) {
-      callback = design;
-      design = {};
-    }
-    callback = callback || emptyFunction;
-
+  function createLayout(name, config, callback) {
     
+    callback = callback || {};
+    
+    var defaultConfig = {
+      schema: {},
+      design: {},
+      hooks: {}
+    };
+
+    config = _.extend(defaultConfig, config);
+
     if (comodl.layouts[name]) {
       return callback(new Error('Layout name ' + schema.name + ' already taken.'));
     }
-
+    
     var err, errors;
     
     // validate schema against model schema
-    errors = validate(modelSchema, schema);
+    errors = validate(modelSchema, config.schema);
     if (errors) {
       err = new Error('Schema does not validate');
       err.errors = errors;
@@ -57,44 +59,47 @@ module.exports = function(db) {
     }
 
     // validate design against design schema
-    errors = validate(designSchema, design);
+    errors = validate(designSchema, config.design);
     if (errors) {
       err = new Error('Design does not validate');
       err.errors = errors;
       return callback(err);
     }
-    
+
     // add _id, _rev and type to schema
-    _.extend(schema.properties, {
+    _.extend(config.schema.properties, {
       _id: { type: 'string' },
       _rev: { type: 'string' },
       type: { type: 'string' }
     });
 
     // put schema on design
-    design.schema = schema;
-    
-    var l = {
-      design: design,
-      name: name
+    config.design.schema = config.schema;
+
+    var layout = {
+      design: config.design,
+      name: name,
+      hooks: config.hooks
     };
 
-    comodl.layouts[l.name] = l;
+    comodl.layouts[layout.name] = layout;
 
-    l.design.name = l.name.toLowerCase();
-    addStandardViews(l.design, name);
+    layout.design.name = layout.name.toLowerCase();
+    addStandardViews(layout.design, name);
 
     // upload the design to the db
-    syncDesign(l, function(err) {
-      callback(err, err ? null : l);
+    syncDesign(layout, function(err) {
+      callback(err, err ? null : layout);
     });
   }
-
+  
 
   //
   // add some standard views to the design when not present
   //
+
   function addStandardViews(design, name) {
+
     design.views = design.views || {};
     if (!design.views.all) {
       design.views.all = {
@@ -113,7 +118,9 @@ module.exports = function(db) {
   //
   // save/update design with schema in db
   //
+
   function syncDesign(layout, callback) {
+
     callback = callback || emptyFunction;
 
     var id = '_design/' + layout.design.name;
@@ -137,8 +144,11 @@ module.exports = function(db) {
   //
   // call a view function from the db
   //
+
   function callView(layoutName, viewName, params, callback) {
+
     callback = callback || emptyFunction;
+
     if (_.isFunction(params)) {
       callback = params;
       params = null;
@@ -174,7 +184,9 @@ module.exports = function(db) {
   //
   // create a doc instance (type, data)
   //
+
   function createDoc(type, data) {
+
     // allow passing just the data with a type property
     if (_.isObject(type)) {
       data = type;
@@ -191,7 +203,9 @@ module.exports = function(db) {
   //
   // create a new doc from old doc with data
   //
+
   function setDocData(doc, data) {
+
     var newDoc = deepClone(data);
     if (doc._id) {
       newDoc._id = doc._id;
@@ -205,7 +219,9 @@ module.exports = function(db) {
   //
   // validate a doc
   //
+
   function validateDoc(doc, callback) {
+
     callback = callback || emptyFunction;
 
     if (!doc.type || !comodl.layouts[doc.type]) {
@@ -225,23 +241,51 @@ module.exports = function(db) {
     callback(null, doc);
   }
 
+
+  //
+  // run hooks
+  //
+
+  function runHooks(action, doc, callback) {
+    
+    if (!doc.type || !comodl.layouts[doc.type]) {
+      var uErr = new Error('Unknown doc type: ' + doc.type);
+      uErr.code = 400;
+      return callback(uErr);
+    }
+    
+    var hooks = comodl.layouts[doc.type].hooks;
+    if (hooks[action]) {
+      return hooks[action](doc, callback);
+    }
+    // no hook
+    callback(null, doc);
+  }
+  
   
   //
   // save a doc to the db
   //
+
   function saveDoc(doc, callback) {
-    callback = callback || emptyFunction;
-    // always validate before saving
-    validateDoc(doc, function(err) {
 
+    runHooks('save', doc, function(err, doc) {
+      
       if (err) return callback(err);
+    
+      callback = callback || emptyFunction;
+      // always validate before saving
+      validateDoc(doc, function(err) {
 
-      db.insert(doc, function(err, body) {
-        if (!err) {
-          doc._id = body.id;
-          doc._rev = body.rev;
-        }
-        callback(err, doc);
+        if (err) return callback(err);
+
+        db.insert(doc, function(err, body) {
+          if (!err) {
+            doc._id = body.id;
+            doc._rev = body.rev;
+          }
+          callback(err, doc);
+        });
       });
     });
   }
@@ -250,7 +294,9 @@ module.exports = function(db) {
   //
   // load a doc from the db
   //
+
   function loadDoc(id, callback) {
+
     callback = callback || emptyFunction;
 
     db.get(id, function(err, doc) {
@@ -270,7 +316,9 @@ module.exports = function(db) {
   //
   // delete the doc in the db
   //
+
   function destroyDoc(id, rev, callback) {
+
     callback = callback || emptyFunction;
 
     if (!id || !rev) {
