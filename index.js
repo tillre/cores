@@ -269,17 +269,19 @@ module.exports = function(db) {
 
   function saveDoc(doc, callback) {
 
+    callback = callback || emptyFunction;
+    
     runHooks('save', doc, function(err, doc) {
       
       if (err) return callback(err);
     
-      callback = callback || emptyFunction;
       // always validate before saving
       validateDoc(doc, function(err) {
 
         if (err) return callback(err);
-
+        
         db.insert(doc, function(err, body) {
+
           if (!err) {
             doc._id = body.id;
             doc._rev = body.rev;
