@@ -113,8 +113,8 @@ describe('comodl', function() {
     it('should create with data', function(done) {
       cm.model.create(data, function(err, d) {
         expect(d).to.be.a('object');
-        expect(d.type).to.be.a('string');
-        expect(d.type).to.equal('Article');
+        expect(d.type_).to.be.a('string');
+        expect(d.type_).to.equal('Article');
 
         doc = d;
         done();
@@ -130,14 +130,14 @@ describe('comodl', function() {
     });
 
     it('should not be valid without data', function(done) {
-      cm.model.validate({ type: 'Article' }, function(err) {
+      cm.model.validate({ type_: 'Article' }, function(err) {
         expect(err).to.exist;
         done();
       });
     });
 
     it('should not save when not valid', function(done) {
-      cm.model.save({ type: 'Article' }, function(err, savedDoc) {
+      cm.model.save({ type_: 'Article' }, function(err, savedDoc) {
         expect(err).to.exist;
         expect(savedDoc).to.not.exist;
         done();
@@ -243,7 +243,7 @@ describe('comodl', function() {
         var doc = docs[0];
         expect(doc).to.have.property('_id');
         expect(doc).to.have.property('_rev');
-        expect(doc).to.have.property('type');
+        expect(doc).to.have.property('type_');
         done();
       });
     });

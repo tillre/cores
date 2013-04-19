@@ -70,7 +70,7 @@ module.exports = function(db) {
     _.extend(config.schema.properties, {
       _id: { type: 'string' },
       _rev: { type: 'string' },
-      type: { type: 'string' }
+      type_: { type: 'string' }
     });
 
     // put schema on design
@@ -104,7 +104,7 @@ module.exports = function(db) {
     if (!design.views.all) {
       design.views.all = {
         // set map function as string, to hardcode the value of name into it
-        map: 'function(doc) { if (doc.type === \"' + name + '\") { emit(doc._id, doc); }}',
+        map: 'function(doc) { if (doc.type_ === \"' + name + '\") { emit(doc._id, doc); }}',
         layout: function(comodl, result, callback) {
           callback(null, result.rows.map(function(doc) {
             return doc.value;
@@ -169,7 +169,7 @@ module.exports = function(db) {
     }
 
     var view = '_design/' + layout.design.name + '/_view/' + viewName;
-    
+
     db.get(view, params, function(err, result) {
       if (err) callback(err);
       else {
@@ -198,9 +198,9 @@ module.exports = function(db) {
   function setDocData(doc, data) {
 
     // make sure the type does not get lost
-    var type = doc.type;
+    var type = doc.type_;
     doc =_.extend(doc, data);
-    doc.type = type;
+    doc.type_ = type;
     return doc;
   }
   
@@ -213,13 +213,13 @@ module.exports = function(db) {
 
     callback = callback || emptyFunction;
 
-    if (!doc.type || !comodl.layouts[doc.type]) {
-      var uErr = new Error('Unknown doc type: ' + doc.type);
+    if (!doc.type_ || !comodl.layouts[doc.type_]) {
+      var uErr = new Error('Unknown doc type: ' + doc.type_);
       uErr.code = 400;
       return callback(uErr);
     }
 
-    var schema = comodl.layouts[doc.type].design.schema;
+    var schema = comodl.layouts[doc.type_].design.schema;
     var errs = validate(schema, doc);
     if (errs) {
       var valErr = new Error('Validation failed', errs);
@@ -237,13 +237,13 @@ module.exports = function(db) {
 
   function runHooks(action, doc, callback) {
     
-    if (!doc.type || !comodl.layouts[doc.type]) {
-      var uErr = new Error('Unknown doc type: ' + doc.type);
+    if (!doc.type_ || !comodl.layouts[doc.type_]) {
+      var uErr = new Error('Unknown doc type: ' + doc.type_);
       uErr.code = 400;
       return callback(uErr);
     }
     
-    var hooks = comodl.layouts[doc.type].hooks;
+    var hooks = comodl.layouts[doc.type_].hooks;
     if (hooks[action]) {
       return hooks[action](doc, callback);
     }
@@ -294,7 +294,7 @@ module.exports = function(db) {
 
       if (err) return callback(err);
 
-      if (!doc.type || !_.isString(doc.type)) {
+      if (!doc.type_ || !_.isString(doc.type_)) {
         var typeErr = new Error('No valid type name on data with id, ' + id + '.');
         typeErr.code = 400;
         return callback(typeErr);
