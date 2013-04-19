@@ -110,35 +110,34 @@ describe('comodl', function() {
       layout = cm.layouts.Article;
     });
     
-    it('should create with type', function() {
-      doc = cm.model.create(layout.name);
-      expect(doc).to.be.a('object');
-      expect(doc).to.have.property('type');
+    it('should create with data', function(done) {
+      cm.model.create(data, function(err, d) {
+        expect(d).to.be.a('object');
+        expect(d.type).to.be.a('string');
+        expect(d.type).to.equal('Article');
+
+        doc = d;
+        done();
+      });
     });
 
-    it('should create with type and data', function() {
-      var d = cm.model.create(layout.name, data);
-      expect(d).to.be.a('object');
-      expect(d.type).to.be.a('string');
-      expect(d.type).to.equal('Article');
-    });
-
-    it('should create with data and data.type', function() {
-      var d = cm.model.create(data);
-      expect(d).to.be.a('object');
-      expect(d.type).to.be.a('string');
-      expect(d.type).to.equal('Article');
+    it('should not create without type on data', function(done) {
+      var d = { title: '', author: '', body: '' };
+      cm.model.create(d, function(err, doc) {
+        expect(err).to.exist;
+        done();
+      });
     });
 
     it('should not be valid without data', function(done) {
-      cm.model.validate(doc, function(err) {
+      cm.model.validate({ type: 'Article' }, function(err) {
         expect(err).to.exist;
         done();
       });
     });
 
     it('should not save when not valid', function(done) {
-      cm.model.save(doc, function(err, savedDoc) {
+      cm.model.save({ type: 'Article' }, function(err, savedDoc) {
         expect(err).to.exist;
         expect(savedDoc).to.not.exist;
         done();
@@ -182,10 +181,11 @@ describe('comodl', function() {
       });
     });
 
-    it('should have the prop from the save hook', function(done) {
+    it('should have the properties from the hooks', function(done) {
       cm.model.load(doc._id, function(err, d) {
         expect(err).to.not.exist;
-        expect(d.hooky).to.equal('Added in hook');
+        expect(d.createHook).to.equal(true);
+        expect(d.saveHook).to.equal(true);
         done();
       });
     });
@@ -212,15 +212,18 @@ describe('comodl', function() {
       // depends on the layout tests
       layout = cm.layouts.Article;
       async.times(numDocs, function(i, cb) {
-        var d = cm.model.create(layout.name, data);
-        d.title = d.title + ' ' + i;
-        cm.model.save(d, function(err, m) {
-          if (err) cb(err);
-          else {
-            docs.push(d);
-            cb();
-          }
+        
+        cm.model.create(data, function(err, d) {
+          d.title = d.title + ' ' + i;
+          cm.model.save(d, function(err, sd) {
+            if (err) cb(err);
+            else {
+              docs.push(sd);
+              cb();
+            }
+          });
         });
+        
       }, done);
     });
 

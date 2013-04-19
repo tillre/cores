@@ -182,21 +182,12 @@ module.exports = function(db) {
   
 
   //
-  // create a doc instance (type, data)
+  // create a doc instance
   //
 
-  function createDoc(type, data) {
-
-    // allow passing just the data with a type property
-    if (_.isObject(type)) {
-      data = type;
-      type = data.type;
-    }
-    var doc = {
-      type: type
-    };
-    _.extend(doc, data);
-    return doc;
+  function createDoc(doc, callback) {
+    doc = deepClone(doc);
+    runHooks('create', doc, callback);
   }
 
 
@@ -206,13 +197,11 @@ module.exports = function(db) {
 
   function setDocData(doc, data) {
 
-    var newDoc = deepClone(data);
-    if (doc._id) {
-      newDoc._id = doc._id;
-      newDoc._rev = doc._rev;
-    }
-    newDoc.type = doc.type;
-    return newDoc;
+    // make sure the type does not get lost
+    var type = doc.type;
+    doc =_.extend(doc, data);
+    doc.type = type;
+    return doc;
   }
   
 
