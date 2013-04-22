@@ -5,51 +5,257 @@ var validate = require('jski');
 var modelSchema = require('./lib/model-schema');
 var designSchema = require('./lib/design-schema');
 
-var emptyFunction = function() {};
-var deepClone = function(d) { return JSON.parse(JSON.stringify(d)); };
 
 
 module.exports = function(db) {
 
-  var comodl = {
-    layouts: {},
-    layout: createLayout,
 
-    view: callView,
-    
-    model: {
-      create: createDoc,
-      setData: setDocData,
-      validate: validateDoc,
-      save: saveDoc,
-      load: loadDoc,
-      destroy: destroyDoc
+  //
+  // Resource contructor
+  //
+
+  function Resource(config) {
+
+    _.extend(this, config);
+
+    // add standard view
+    this.design.views = this.design.views || {};
+    if (!this.design.views.all) {
+      this.design.views.all = {
+        // set map function as string, to hardcode the value of name into it
+        map: 'function(doc) { if (doc.type_ === \"' + this.name + '\") { emit(doc._id, doc); }}'
+      };
     }
+  }
+
+
+  //
+  // Sync design/schema with couchdb
+  //
+
+  Resource.prototype.sync = function(callback) {
+
+    var self = this;
+    var id = '_design/' + this.design.name;
+    this.design._id = id;
+
+    db.get(id, function(err, doc) {
+
+      if (err && err.error !== 'not_found') {
+        return callback(err);
+      }
+      else if (!err) {
+        // update design
+        self.design._id = doc._id;
+        self.design._rev = doc._rev;
+      }
+
+      db.insert(self.design, function(err) {
+        if (err) callback(err);
+        else callback(null, self);
+      });
+    });
   };
 
 
   //
-  // create a doc layout, config: { schema, design }
+  // Check if type matches the Resource name
   //
-  
-  function createLayout(name, config, callback) {
+
+  Resource.prototype.checkType = function(doc) {
+
+    if (!doc.type_ === this.name) {
+      var typeErr = new Error('Doc type does not match resource type: ' + doc.type_ + ' != ' + this.name);
+      typeErr.code = 400;
+      return typeErr;
+    }
+    // type matches
+    return null;
+  };
+
+
+  //
+  // Call a couchdb design view function
+  //
+
+  Resource.prototype.view = function(name, params, callback) {
+    if (_.isFunction(params)) {
+      callback = params;
+      params = {};
+    }
     
-    callback = callback || {};
+    if (!this.design.views[name]) {
+      var err = new Error('Resource view not found with name: ' + name + '.');
+      err.code = 404;
+      return callback(err);
+    }
     
-    var defaultConfig = {
+    db.view(this.design.name, name, params, function(err, result) {
+      if (err) callback(err);
+      else callback(null, result);
+    });
+  };
+
+
+  //
+  // Create a document with optional data
+  //
+
+  Resource.prototype.create = function(data, callback) {
+
+    if (typeof data === 'function') {
+      callback = data;
+      data = {};
+    }
+    
+    var d = {};
+    _.extend(d, data);
+    d.type_ = this.name;
+    
+    this.runHook('create', d, callback);
+  };
+
+
+  //
+  // Validate a document
+  //
+
+  Resource.prototype.validate = function(doc, callback) {
+
+    var typeErr = this.checkType(doc);
+    if (typeErr) callback(typeErr);
+
+    var errs = validate(this.schema, doc);
+    if (errs) {
+      var valErr = new Error('Validation failed', errs);
+      valErr.code = 400;
+      valErr.errors = errs;
+      return callback(valErr);
+    }
+    callback(null, doc);
+  };
+
+
+  //
+  // Load a document from the DB
+  //
+
+  Resource.prototype.load = function(id, callback) {
+
+    db.get(id, function(err, doc) {
+
+      if (err) return callback(err);
+
+      if (!doc.type_ || !_.isString(doc.type_)) {
+        var typeErr = new Error('No valid type name on data with id, ' + id + '.');
+        typeErr.code = 400;
+        return callback(typeErr);
+      }
+      callback(null, doc);
+    });
+  };
+
+
+  //
+  // Save a document to the DB
+  //
+
+  Resource.prototype.save = function(doc, callback) {
+
+    var typeErr = this.checkType(doc);
+    if (typeErr) callback(typeErr);
+
+    var self = this;
+    
+    this.runHook('save', doc, function(err, doc) {
+      
+      if (err) return callback(err);
+      
+      // always validate before saving
+      self.validate(doc, function(err) {
+
+        if (err) return callback(err);
+        
+        db.insert(doc, function(err, body) {
+
+          if (!err) {
+            doc._id = body.id;
+            doc._rev = body.rev;
+          }
+          callback(err, doc);
+        });
+      });
+    });
+  };
+
+
+  //
+  // Delete document from the DB
+  //
+
+  Resource.prototype.destroy = function(doc, callback) {
+
+    var typeErr = this.checkType(doc);
+    if (typeErr) callback(typeErr);
+
+    if (!doc._id || !doc._rev) {
+      var err = new Error('Destroy needs an id and rev.');
+      err.code = 400;
+      return callback(err);
+    }
+
+    // get the doc first, to ensure it has the correct type
+
+    var self = this;
+    
+    db.get(doc._id, function(err, d) {
+      if (err) {
+        err.code = 400;
+        return callback(err);
+      }
+      typeErr = self.checkType(d);
+      if (typeErr) callback(typeErr);
+      
+      db.destroy(doc._id, doc._rev, callback);
+    });
+  };
+
+
+
+  //
+  // Run a hook on a document
+  //
+
+  Resource.prototype.runHook = function(name, doc, callback) {
+    
+    if (this.hooks[name]) {
+      return this.hooks[name](doc, callback);
+    }
+    // no hook
+    callback(null, doc);
+  };
+
+
+  //
+  // Create a Resource object
+  //
+
+  function createResource(config, callback) {
+
+    var err, errors;
+    
+    if (!config.name) {
+      err = new Error('Resource config misses name property');
+      err.code = 400;
+      return callback(err);
+    }
+    
+    config = _.extend({
       schema: {},
       design: {},
       hooks: {}
-    };
+    }, config);
 
-    config = _.extend(defaultConfig, config);
-
-    if (comodl.layouts[name]) {
-      return callback(new Error('Layout name ' + schema.name + ' already taken.'));
-    }
-    
-    var err, errors;
-    
     // validate schema against model schema
     errors = validate(modelSchema, config.schema);
     if (errors) {
@@ -75,250 +281,12 @@ module.exports = function(db) {
 
     // put schema on design
     config.design.schema = config.schema;
-
-    var layout = {
-      design: config.design,
-      name: name,
-      hooks: config.hooks
-    };
-
-    comodl.layouts[layout.name] = layout;
-
-    layout.design.name = layout.name.toLowerCase();
-    addStandardViews(layout.design, name);
-
-    // upload the design to the db
-    syncDesign(layout, function(err) {
-      callback(err, err ? null : layout);
-    });
-  }
-  
-
-  //
-  // add some standard views to the design when not present
-  //
-
-  function addStandardViews(design, name) {
-
-    design.views = design.views || {};
-    if (!design.views.all) {
-      design.views.all = {
-        // set map function as string, to hardcode the value of name into it
-        map: 'function(doc) { if (doc.type_ === \"' + name + '\") { emit(doc._id, doc); }}',
-        layout: function(comodl, result, callback) {
-          callback(null, result.rows.map(function(doc) {
-            return doc.value;
-          }));
-        }
-      };
-    }
-  }
-  
-
-  //
-  // save/update design with schema in db
-  //
-
-  function syncDesign(layout, callback) {
-
-    callback = callback || emptyFunction;
-
-    var id = '_design/' + layout.design.name;
-    layout.design._id = id;
-
-    db.get(id, function(err, doc) {
-      if (err && err.error === 'not_found') {
-        // inital upload
-        return db.insert(layout.design, callback);
-      }
-      if (err) {
-        return callback(err);
-      }
-      // update
-      layout.design._rev = doc._rev;
-      db.insert(layout.design, callback);
-    });
-  }
-
-
-  //
-  // call a view function from the db
-  //
-
-  function callView(layoutName, viewName, params, callback) {
-
-    callback = callback || emptyFunction;
-
-    if (_.isFunction(params)) {
-      callback = params;
-      params = null;
-    }
+    config.design.name = config.name.toLowerCase();
     
-    var layout = comodl.layouts[layoutName];
-
-    if (!layout)  {
-      var err = new Error('Layout not found with name, ' + layoutName + '.');
-      err.code = 404;
-      return callback(err);
-    }
-    
-    if (!layout.design.views[viewName]) {
-      var err = new Error('Layout view not found with name, ' + viewName + '.');
-      err.code = 404;
-      return callback(err);
-    }
-
-    var view = '_design/' + layout.design.name + '/_view/' + viewName;
-
-    db.get(view, params, function(err, result) {
-      if (err) callback(err);
-      else {
-        // call layout function from design file
-        var f = layout.design.views[viewName].layout;
-        if (f) f(comodl, result, callback);
-      }
-    });
-  }
-  
-
-  //
-  // create a doc instance
-  //
-
-  function createDoc(doc, callback) {
-    doc = deepClone(doc);
-    runHooks('create', doc, callback);
+    var res = new Resource(config);
+    res.sync(callback);
   }
 
 
-  //
-  // create a new doc from old doc with data
-  //
-
-  function setDocData(doc, data) {
-
-    // make sure the type does not get lost
-    var type = doc.type_;
-    doc =_.extend(doc, data);
-    doc.type_ = type;
-    return doc;
-  }
-  
-
-  //
-  // validate a doc
-  //
-
-  function validateDoc(doc, callback) {
-
-    callback = callback || emptyFunction;
-
-    if (!doc.type_ || !comodl.layouts[doc.type_]) {
-      var uErr = new Error('Unknown doc type: ' + doc.type_);
-      uErr.code = 400;
-      return callback(uErr);
-    }
-
-    var schema = comodl.layouts[doc.type_].design.schema;
-    var errs = validate(schema, doc);
-    if (errs) {
-      var valErr = new Error('Validation failed', errs);
-      valErr.code = 400;
-      valErr.errors = errs;
-      return callback(valErr);
-    }
-    callback(null, doc);
-  }
-
-
-  //
-  // run hooks
-  //
-
-  function runHooks(action, doc, callback) {
-    
-    if (!doc.type_ || !comodl.layouts[doc.type_]) {
-      var uErr = new Error('Unknown doc type: ' + doc.type_);
-      uErr.code = 400;
-      return callback(uErr);
-    }
-    
-    var hooks = comodl.layouts[doc.type_].hooks;
-    if (hooks[action]) {
-      return hooks[action](doc, callback);
-    }
-    // no hook
-    callback(null, doc);
-  }
-  
-  
-  //
-  // save a doc to the db
-  //
-
-  function saveDoc(doc, callback) {
-
-    callback = callback || emptyFunction;
-    
-    runHooks('save', doc, function(err, doc) {
-      
-      if (err) return callback(err);
-    
-      // always validate before saving
-      validateDoc(doc, function(err) {
-
-        if (err) return callback(err);
-        
-        db.insert(doc, function(err, body) {
-
-          if (!err) {
-            doc._id = body.id;
-            doc._rev = body.rev;
-          }
-          callback(err, doc);
-        });
-      });
-    });
-  }
-
-  
-  //
-  // load a doc from the db
-  //
-
-  function loadDoc(id, callback) {
-
-    callback = callback || emptyFunction;
-
-    db.get(id, function(err, doc) {
-
-      if (err) return callback(err);
-
-      if (!doc.type_ || !_.isString(doc.type_)) {
-        var typeErr = new Error('No valid type name on data with id, ' + id + '.');
-        typeErr.code = 400;
-        return callback(typeErr);
-      }
-      callback(null, doc);
-    });
-  }
-  
-
-  //
-  // delete the doc in the db
-  //
-
-  function destroyDoc(id, rev, callback) {
-
-    callback = callback || emptyFunction;
-
-    if (!id || !rev) {
-      var err = new Error('Destroy needs an id and rev.');
-      err.code = 400;
-      return callback(err);
-    }
-    db.destroy(id, rev, callback);
-  }
-
-  return comodl;
+  return createResource;
 };
