@@ -233,9 +233,9 @@ module.exports = function(db) {
   //
 
   Resource.prototype.runHook = function(name, doc, callback) {
-    
+
     if (this.hooks[name]) {
-      return this.hooks[name](doc, callback);
+      return this.hooks[name](this, doc, callback);
     }
     // no hook
     callback(null, doc);
