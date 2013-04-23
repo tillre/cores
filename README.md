@@ -1,4 +1,4 @@
-comodl - work in progress
-=========================
+cores - work in progress
+========================
 
-thin couchdb model layer
+thid layer over couchdb

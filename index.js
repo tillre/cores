@@ -162,8 +162,14 @@ module.exports = function(db) {
 
   Resource.prototype.save = function(doc, callback) {
 
-    var typeErr = this.checkType(doc);
-    if (typeErr) callback(typeErr);
+    if (doc._id) {
+      // typecheck update
+      var typeErr = this.checkType(doc);
+      if (typeErr) return callback(typeErr);
+    }
+
+    // enforce type
+    doc.type_ = this.name;
 
     var self = this;
     

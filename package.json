@@ -1,10 +1,10 @@
 {
-  "name": "comodl",
+  "name": "cores",
   "version": "0.0.1",
   "description": "thin couchdb model layer",
   "main": "index.js",
   "scripts": {
-    "test": "./node_modules/mocha/bin/mocha ./test",
+    "test": "./node_modules/mocha/bin/mocha -R spec ./test",
     "watch-tests": "./node_modules/mocha/bin/mocha -w ./test"
   },
   "repository": "",

@@ -3,10 +3,10 @@
 var expect = require('chai').expect;
 var async = require('async');
 var nano = require('nano')('http://localhost:5984');
-var comodl = require('../index.js');
+var cores = require('../index.js');
 
 
-describe('comodl', function() {
+describe('cores', function() {
 
   // test data
   var resName = 'Article',
@@ -16,9 +16,9 @@ describe('comodl', function() {
       data = require('./data');
 
   // create db before tests and destroy afterwards
-  var dbName = 'test-comodl',
+  var dbName = 'test-cores',
       db = nano.use(dbName),
-      cm = comodl(db);
+      createResource = cores(db);
 
  
   before(function(done) {
@@ -48,7 +48,7 @@ describe('comodl', function() {
   describe('Resource creation', function() {
 
     it('should create with schema', function(done) {
-      cm({ name: resName, schema: schema }, function(err, r) {
+      createResource({ name: resName, schema: schema }, function(err, r) {
         expect(err).to.not.exist;
         expect(r).to.be.a('object');
         done();
@@ -57,7 +57,7 @@ describe('comodl', function() {
     
 
     it('should not create without name', function(done) {
-      cm({ schema: schema, design: design, hooks: hooks }, function(err, r) {
+      createResource({ schema: schema, design: design, hooks: hooks }, function(err, r) {
         expect(err).to.exist;
         done();
       });
@@ -65,7 +65,7 @@ describe('comodl', function() {
     
     
     it('should not create with invalid schema', function(done) {
-      cm({ name: resName, schema: {bar:42} }, function(err, r) {
+      createResource({ name: resName, schema: {bar:42} }, function(err, r) {
         expect(err).to.exist;
         done();
       });
@@ -73,14 +73,14 @@ describe('comodl', function() {
 
 
     it('should not create with invalid design', function(done) {
-      cm({ name: resName, schema: schema, design: {views:''} }, function(err, r) {
+      createResource({ name: resName, schema: schema, design: {views:''} }, function(err, r) {
         expect(err).to.exist;
         done();
       });
     });
 
     it('should create with schema and design', function(done) {
-      cm({ name: resName, schema: schema, design: design, hooks: hooks }, function(err, r) {
+      createResource({ name: resName, schema: schema, design: design, hooks: hooks }, function(err, r) {
         expect(err).to.not.exist;
         expect(r).to.be.a('object');
 
@@ -176,6 +176,13 @@ describe('comodl', function() {
       });
     });
 
+    it('should not save when has wrong type', function(done) {
+      res.save({ _id: 'somefoo', type_: 'Foo' }, function(err, d) {
+        expect(err).to.exist;
+        done();
+      });
+    });
+    
     it('should load', function(done) {
       res.load(doc._id, function(err, d) {
         expect(err).to.not.exist;
