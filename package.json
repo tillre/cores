@@ -1,7 +1,7 @@
 {
   "name": "cores",
   "version": "0.0.1",
-  "description": "thin couchdb model layer",
+  "description": "couchdb resources with json schema validation",
   "main": "index.js",
   "scripts": {
     "test": "./node_modules/mocha/bin/mocha -R spec ./test",
