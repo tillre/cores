@@ -1,4 +1,4 @@
 cores - work in progress
 ========================
 
-thid layer over couchdb
+couchdb resource layer with json schema validation
