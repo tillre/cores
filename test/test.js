@@ -80,21 +80,28 @@ describe('cores', function() {
     });
 
     it('should create with schema and design and hooks', function(done) {
-      createResource({ name: resName, schema: schema, design: design,
-                       hooks: hooks, createOption: 'create', loadOption: 'load', saveOption: 'save' }, function(err, r) {
-        expect(err).to.not.exist;
-        expect(r).to.be.a('object');
+      createResource(
+        { name: resName, schema: schema, design: design, hooks: hooks,
+          createOption: 'create', loadOption: 'load', saveOption: 'save' },
 
-        res = r;
+        function(err, r) {
+          expect(err).to.not.exist;
+          expect(r).to.be.a('object');
 
-        expect(res.create).to.be.a('function');
-        expect(res.load).to.be.a('function');
-        expect(res.save).to.be.a('function');
-        expect(res.destroy).to.be.a('function');
-        expect(res.view).to.be.a('function');
-        
-        done();
-      });
+          res = r;
+
+          expect(res.create).to.be.a('function');
+          expect(res.load).to.be.a('function');
+          expect(res.save).to.be.a('function');
+          expect(res.destroy).to.be.a('function');
+          expect(res.view).to.be.a('function');
+
+          // schema should have a name added
+          expect(res.schema.name).to.equal('Article');
+          
+          done();
+        }
+      );
     });
 
     it('should upload design and schema to db', function(done) {

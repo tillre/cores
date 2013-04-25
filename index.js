@@ -291,6 +291,11 @@ module.exports = function(db) {
       type_: { type: 'string' }
     });
 
+    // add name to schema when it has none
+    if (!config.schema.name) {
+      config.schema.name = config.name;
+    }
+    
     // put schema on design
     config.design.schema = config.schema;
     config.design.name = config.name.toLowerCase();
