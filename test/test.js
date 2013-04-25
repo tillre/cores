@@ -81,7 +81,7 @@ describe('cores', function() {
 
     it('should create with schema and design and hooks', function(done) {
       createResource({ name: resName, schema: schema, design: design,
-                       hooks: hooks, createOption: 'one', saveOption: 'two' }, function(err, r) {
+                       hooks: hooks, createOption: 'create', loadOption: 'load', saveOption: 'save' }, function(err, r) {
         expect(err).to.not.exist;
         expect(r).to.be.a('object');
 
@@ -195,8 +195,9 @@ describe('cores', function() {
     it('should have the properties from the hooks', function(done) {
       res.load(doc._id, function(err, d) {
         expect(err).to.not.exist;
-        expect(d.createHook).to.equal('one');
-        expect(d.saveHook).to.equal('two');
+        expect(d.createHook).to.equal('create');
+        expect(d.loadHook).to.equal('load');
+        expect(d.saveHook).to.equal('save');
         done();
       });
     });

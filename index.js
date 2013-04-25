@@ -142,6 +142,8 @@ module.exports = function(db) {
 
   Resource.prototype.load = function(id, callback) {
 
+    var self = this;
+    
     db.get(id, function(err, doc) {
 
       if (err) return callback(err);
@@ -151,7 +153,11 @@ module.exports = function(db) {
         typeErr.code = 400;
         return callback(typeErr);
       }
-      callback(null, doc);
+
+      self.runHook('load', doc, function(err, doc) {
+        if (err) return callback(err);
+        callback(null, doc);
+      });
     });
   };
 
