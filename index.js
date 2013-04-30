@@ -16,8 +16,28 @@ module.exports = function(db) {
 
   function Resource(config) {
 
-    _.extend(this, config);
+    _.extend(
+      this,
+      { schema: {}, design: {}, hooks: {} },
+      config
+    );
 
+    // add _id, _rev and type to schema
+    _.extend(this.schema.properties, {
+      _id: { type: 'string' },
+      _rev: { type: 'string' },
+      type_: { type: 'string' }
+    });
+
+    // add name to schema when it has none
+    if (!this.schema.name) {
+      this.schema.name = this.name;
+    }
+    
+    // put schema on design
+    this.design.schema = this.schema;
+    this.design.name = this.name.toLowerCase();
+    
     // add standard view
     this.design.views = this.design.views || {};
     if (!this.design.views.all) {
@@ -261,44 +281,25 @@ module.exports = function(db) {
       err.code = 400;
       return callback(err);
     }
-    
-    config = _.extend({
-      schema: {},
-      design: {},
-      hooks: {}
-    }, config);
 
-    // validate schema against model schema
-    errors = validate(modelSchema, config.schema);
-    if (errors) {
-      err = new Error('Schema does not validate');
-      err.errors = errors;
-      return callback(err);
+    if (config.schema) {
+      // validate schema against model schema
+      errors = validate(modelSchema, config.schema);
+      if (errors) {
+        err = new Error('Schema does not validate');
+        err.errors = errors;
+        return callback(err);
+      }
     }
-
-    // validate design against design schema
-    errors = validate(designSchema, config.design);
-    if (errors) {
-      err = new Error('Design does not validate');
-      err.errors = errors;
-      return callback(err);
+    if (config.design) {
+      // validate design against design schema
+      errors = validate(designSchema, config.design);
+      if (errors) {
+        err = new Error('Design does not validate');
+        err.errors = errors;
+        return callback(err);
+      }
     }
-
-    // add _id, _rev and type to schema
-    _.extend(config.schema.properties, {
-      _id: { type: 'string' },
-      _rev: { type: 'string' },
-      type_: { type: 'string' }
-    });
-
-    // add name to schema when it has none
-    if (!config.schema.name) {
-      config.schema.name = config.name;
-    }
-    
-    // put schema on design
-    config.design.schema = config.schema;
-    config.design.name = config.name.toLowerCase();
     
     var res = new Resource(config);
     res.sync(callback);
