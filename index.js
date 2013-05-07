@@ -287,6 +287,7 @@ module.exports = function(db) {
       errors = validate(modelSchema, config.schema);
       if (errors) {
         err = new Error('Schema does not validate');
+        err.resource = config.name;
         err.errors = errors;
         return callback(err);
       }
@@ -296,6 +297,7 @@ module.exports = function(db) {
       errors = validate(designSchema, config.design);
       if (errors) {
         err = new Error('Design does not validate');
+        err.resource = config.name;
         err.errors = errors;
         return callback(err);
       }
