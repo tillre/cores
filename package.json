@@ -16,7 +16,6 @@
     "async": "0.2.x"
   },
   "devDependencies": {
-    "mocha": "1.x.x",
-    "chai": "1.x.x"
+    "mocha": "1.x.x"
   }
 }
