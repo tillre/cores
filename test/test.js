@@ -57,7 +57,7 @@ describe('cores', function() {
         done();
       });
     });
-    
+
 
     it('should not create without name', function(done) {
       createResource({ schema: schema, design: design, hooks: hooks }, function(err, r) {
@@ -85,7 +85,7 @@ describe('cores', function() {
     it('should create with schema and design and hooks', function(done) {
       createResource(
         { name: resName, schema: schema, design: design, hooks: hooks,
-          createOption: 'create', loadOption: 'load', saveOption: 'save' },
+          app: { createOption: 'create', loadOption: 'load', saveOption: 'save' } },
 
         function(err, r) {
           assert(!err);

@@ -1,10 +1,13 @@
-var _ = require('underscore');
 var nano = require('nano')('http://localhost:5984');
 var validate = require('jski');
 
 var modelSchema = require('./lib/model-schema');
 var designSchema = require('./lib/design-schema');
 
+
+var extend = function(a, b) {
+  for (var x in b) { a[x] = b[x]; }
+};
 
 
 module.exports = function(db) {
@@ -16,14 +19,16 @@ module.exports = function(db) {
 
   function Resource(config) {
 
-    _.extend(
-      this,
-      { schema: {}, design: {}, hooks: {} },
-      config
-    );
+    this.name = config.name;
+    this.schema = config.schema || {};
+    this.design = config.design || {};
+    this.hooks = config.hooks || {};
 
+    // application specific state passed into the hooks
+    this.app = config.app || {};
+    
     // add _id, _rev and type to schema
-    _.extend(this.schema.properties, {
+    extend(this.schema.properties, {
       _id: { type: 'string' },
       _rev: { type: 'string' },
       type_: { type: 'string' }
@@ -99,7 +104,7 @@ module.exports = function(db) {
   //
 
   Resource.prototype.view = function(name, params, callback) {
-    if (_.isFunction(params)) {
+    if (typeof params === 'function') {
       callback = params;
       params = {};
     }
@@ -129,7 +134,7 @@ module.exports = function(db) {
     }
     
     var d = {};
-    _.extend(d, data);
+    extend(d, data);
     d.type_ = this.name;
     
     this.runHook('create', d, callback);
@@ -168,7 +173,7 @@ module.exports = function(db) {
 
       if (err) return callback(err);
 
-      if (!doc.type_ || !_.isString(doc.type_)) {
+      if (!doc.type_ || !(typeof doc.type_ === 'string')) {
         var typeErr = new Error('No valid type name on data with id, ' + id + '.');
         typeErr.code = 400;
         return callback(typeErr);
@@ -261,7 +266,7 @@ module.exports = function(db) {
   Resource.prototype.runHook = function(name, doc, callback) {
 
     if (this.hooks[name]) {
-      return this.hooks[name](this, doc, callback);
+      return this.hooks[name](this.app, doc, callback);
     }
     // no hook
     callback(null, doc);

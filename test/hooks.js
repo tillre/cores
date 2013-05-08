@@ -1,17 +1,17 @@
 module.exports = {
 
-  create: function(res, doc, callback) {
-    doc.createHook = res.createOption;
+  create: function(app, doc, callback) {
+    doc.createHook = app.createOption;
     callback(null, doc);
   },
 
-  load: function(res, doc, callback) {
-    doc.loadHook = res.loadOption;
+  load: function(app, doc, callback) {
+    doc.loadHook = app.loadOption;
     callback(null, doc);
   },
   
-  save: function(res, doc, callback) {
-    doc.saveHook = res.saveOption;
+  save: function(app, doc, callback) {
+    doc.saveHook = app.saveOption;
     callback(null, doc);
   }
 };
