@@ -3,6 +3,7 @@
 var async = require('async');
 var nano = require('nano')('http://localhost:5984');
 var cores = require('../index.js');
+var validate = require('jski');
 
 var assert = require('assert');
 var util = require('util');
@@ -160,6 +161,23 @@ describe('cores', function() {
       res.validate(data, function(err) {
         assert(!err);
         done();
+      });
+    });
+
+
+    it('should use a custom validation function', function(done) {
+
+      var b = false;
+      var v = function(schema, value) {
+        b = true;
+        return validate(schema, value);
+      };
+      
+      createResource({ name: resName + '2', schema: schema, validate: v }, function(err, r) {
+        r.validate(data, function(errs) {
+          assert(b);
+          done();
+        });
       });
     });
 

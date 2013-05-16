@@ -5,8 +5,9 @@ var modelSchema = require('./lib/model-schema');
 var designSchema = require('./lib/design-schema');
 
 
-var extend = function(a, b) {
-  for (var x in b) { a[x] = b[x]; }
+function extend(a, b) {
+  for (var x in b) a[x] = b[x];
+  return a;
 };
 
 
@@ -23,6 +24,7 @@ module.exports = function(db) {
     this.schema = config.schema || {};
     this.design = config.design || {};
     this.hooks = config.hooks || {};
+    this.validateService = config.validate || validate;
 
     // application specific state passed into the hooks
     this.app = config.app || {};
@@ -150,7 +152,7 @@ module.exports = function(db) {
     var typeErr = this.checkType(doc);
     if (typeErr) callback(typeErr);
 
-    var errs = validate(this.schema, doc);
+    var errs = this.validateService(this.schema, doc);
     if (errs) {
       var valErr = new Error('Validation failed', errs);
       valErr.code = 400;
