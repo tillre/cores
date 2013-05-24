@@ -1,8 +1,10 @@
 var nano = require('nano')('http://localhost:5984');
-var validate = require('jski');
 
-var modelSchema = require('./lib/model-schema');
-var designSchema = require('./lib/design-schema');
+var jski = require('jski');
+
+var modelSchema = jski.schema(require('./lib/model-schema'));
+var designSchema = jski.schema(require('./lib/design-schema'));
+
 
 
 function extend(a, b) {
@@ -24,8 +26,15 @@ module.exports = function(db) {
     this.schema = config.schema || {};
     this.design = config.design || {};
     this.hooks = config.hooks || {};
-    this.validateService = config.validate || validate;
 
+    // use or create validation service
+    this.validateService = config.validate || (function(schema) {
+      var validator = jski.schema(schema);
+      return function(value) {
+        return validator.validate(value);
+      };
+    })(this.schema);
+    
     // application specific state passed into the hooks
     this.app = config.app || {};
     
@@ -35,11 +44,6 @@ module.exports = function(db) {
       _rev: { type: 'string' },
       type_: { type: 'string' }
     });
-
-    // add name to schema when it has none
-    if (!this.schema.name) {
-      this.schema.name = this.name;
-    }
     
     // put schema on design
     this.design.schema = this.schema;
@@ -152,8 +156,8 @@ module.exports = function(db) {
     var typeErr = this.checkType(doc);
     if (typeErr) callback(typeErr);
 
-    var errs = this.validateService(this.schema, doc);
-    if (errs) {
+    var errs = this.validateService(doc);
+    if (errs.length) {
       var valErr = new Error('Validation failed', errs);
       valErr.code = 400;
       valErr.errors = errs;
@@ -291,8 +295,9 @@ module.exports = function(db) {
 
     if (config.schema) {
       // validate schema against model schema
-      errors = validate(modelSchema, config.schema);
-      if (errors) {
+      // errors = validate(modelSchema, config.schema);
+      errors = modelSchema.validate(config.schema);
+      if (errors.length) {
         err = new Error('Schema does not validate');
         err.resource = config.name;
         err.errors = errors;
@@ -301,8 +306,9 @@ module.exports = function(db) {
     }
     if (config.design) {
       // validate design against design schema
-      errors = validate(designSchema, config.design);
-      if (errors) {
+      // errors = validate(designSchema, config.design);
+      errors = designSchema.validate(config.design);
+      if (errors.length) {
         err = new Error('Design does not validate');
         err.resource = config.name;
         err.errors = errors;
@@ -313,7 +319,6 @@ module.exports = function(db) {
     var res = new Resource(config);
     res.sync(callback);
   }
-
 
   return createResource;
 };

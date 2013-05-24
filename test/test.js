@@ -3,7 +3,7 @@
 var async = require('async');
 var nano = require('nano')('http://localhost:5984');
 var cores = require('../index.js');
-var validate = require('jski');
+var jski = require('jski');
 
 var assert = require('assert');
 var util = require('util');
@@ -100,9 +100,6 @@ describe('cores', function() {
           assert(typeof res.destroy === 'function');
           assert(typeof res.view === 'function');
           
-          // schema should have a name added
-          assert(res.schema.name === 'Article');
-          
           done();
         }
       );
@@ -168,9 +165,9 @@ describe('cores', function() {
     it('should use a custom validation function', function(done) {
 
       var b = false;
-      var v = function(schema, value) {
+      var v = function(value) {
         b = true;
-        return validate(schema, value);
+        return jski.schema(schema).validate(value);
       };
       
       createResource({ name: resName + '2', schema: schema, validate: v }, function(err, r) {
