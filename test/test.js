@@ -106,13 +106,12 @@ describe('cores', function() {
     });
 
     
-    it('should upload design and schema to db', function(done) {
+    it('should upload design to db', function(done) {
       db.get('_design/' + res.design.name, function(err, doc) {
         assert(!err);
         assert(typeof doc.views === 'object');
         assert(doc.views.all);
         assert(doc.views.titles);
-        assert(typeof doc.schema === 'object');
         done();
       });
     });
@@ -162,21 +161,21 @@ describe('cores', function() {
     });
 
 
-    it('should use a custom validation function', function(done) {
+    // it('should use a custom validation function', function(done) {
 
-      var b = false;
-      var v = function(value) {
-        b = true;
-        return jski.schema(schema).validate(value);
-      };
+    //   var b = false;
+    //   var v = function(value) {
+    //     b = true;
+    //     return jski.schema(schema).validate(value);
+    //   };
       
-      createResource({ name: resName + '2', schema: schema, validate: v }, function(err, r) {
-        r.validate(data, function(errs) {
-          assert(b);
-          done();
-        });
-      });
-    });
+    //   createResource({ name: resName + '2', schema: schema, validate: v }, function(err, r) {
+    //     r.validate(data, function(errs) {
+    //       assert(b);
+    //       done();
+    //     });
+    //   });
+    // });
 
     
     it('should not save when not valid', function(done) {

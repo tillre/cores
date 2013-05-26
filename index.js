@@ -1,10 +1,21 @@
 var nano = require('nano')('http://localhost:5984');
-
 var jski = require('jski');
 
-var modelSchema = jski.schema(require('./lib/model-schema'));
-var designSchema = jski.schema(require('./lib/design-schema'));
 
+var resourceSchema = jski.object({
+  title: jski.string(),
+  description: jski.string(),
+  properties: jski.object()
+}).required(['properties']);
+
+
+var designSchema = jski.object({
+  title: jski.string(),
+  description: jski.string(),
+  views: jski.object(),
+  shows: jski.object(),
+  lists: jski.object()
+});
 
 
 function extend(a, b) {
@@ -23,17 +34,13 @@ module.exports = function(db) {
   function Resource(config) {
 
     this.name = config.name;
-    this.schema = config.schema || {};
     this.design = config.design || {};
     this.hooks = config.hooks || {};
 
-    // use or create validation service
-    this.validateService = config.validate || (function(schema) {
-      var validator = jski.schema(schema);
-      return function(value) {
-        return validator.validate(value);
-      };
-    })(this.schema);
+    this.schema = config.schema || {};
+    if (!this.schema.__jski__) {
+      this.schema = jski.schema(this.schema);
+    }
     
     // application specific state passed into the hooks
     this.app = config.app || {};
@@ -46,7 +53,7 @@ module.exports = function(db) {
     });
     
     // put schema on design
-    this.design.schema = this.schema;
+    // this.design.schema = this.schema;
     this.design.name = this.name.toLowerCase();
     
     // add standard view
@@ -156,7 +163,8 @@ module.exports = function(db) {
     var typeErr = this.checkType(doc);
     if (typeErr) callback(typeErr);
 
-    var errs = this.validateService(doc);
+    // var errs = this.validateService(doc);
+    var errs = this.schema.validate(doc);
     if (errs.length) {
       var valErr = new Error('Validation failed', errs);
       valErr.code = 400;
@@ -285,33 +293,30 @@ module.exports = function(db) {
 
   function createResource(config, callback) {
 
-    var err, errors;
+    var err, errs;
     
     if (!config.name) {
-      err = new Error('Resource config misses name property');
+      err = new Error('Resource config has no name property');
       err.code = 400;
       return callback(err);
     }
 
     if (config.schema) {
-      // validate schema against model schema
-      // errors = validate(modelSchema, config.schema);
-      errors = modelSchema.validate(config.schema);
-      if (errors.length) {
-        err = new Error('Schema does not validate');
-        err.resource = config.name;
-        err.errors = errors;
+      errs = resourceSchema.validate(config.schema);
+      if (errs.length) {
+        err = new Error('Resource schema does not validate');
+        err.errors = errs;
+        err.code = 400;
         return callback(err);
       }
     }
+
     if (config.design) {
-      // validate design against design schema
-      // errors = validate(designSchema, config.design);
-      errors = designSchema.validate(config.design);
-      if (errors.length) {
-        err = new Error('Design does not validate');
-        err.resource = config.name;
-        err.errors = errors;
+      errs = designSchema.validate(config.design);
+      if (errs.length) {
+        err = new Error('Resource design does not validate');
+        err.errors = errs;
+        err.code = 400;
         return callback(err);
       }
     }
