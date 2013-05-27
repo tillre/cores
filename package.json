@@ -1,17 +1,31 @@
 {
   "name": "cores",
-  "version": "0.0.1",
-  "description": "couchdb resources with json schema validation",
+  "version": "0.0.2",
+  "description": "couchdb resources with validation",
   "main": "index.js",
   "scripts": {
     "test": "./node_modules/mocha/bin/mocha -R spec ./test",
     "watch-tests": "./node_modules/mocha/bin/mocha -w ./test"
   },
-  "repository": "",
-  "author": "",
-  "license": "BSD",
+  "keywords": [
+    "couchdb",
+    "json",
+    "schema"
+  ],
+  "author": {
+    "name": "skoni"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/skoni/cores.git"
+  },
+  "licenses": [ {
+    "type": "Apache 2.0",
+    "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+  } ],
   "dependencies": {
-    "nano": "3.x.x"
+    "nano": "3.x.x",
+    "jski": "~0.1.0"
   },
   "devDependencies": {
     "mocha": "1.x.x",
