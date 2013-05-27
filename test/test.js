@@ -12,11 +12,11 @@ var util = require('util');
 describe('cores', function() {
 
   // test data
-  var resName = 'Article',
-      schema = require('./schema'),
-      design = require('./design'),
-      hooks = require('./hooks'),
-      data = require('./data');
+  var resName = 'Article';
+  var schema = require('./schema');
+  var design = require('./design');
+  var hooks = require('./hooks');
+  var data = require('./data');
 
   // create db before tests and destroy afterwards
   var dbName = 'test-cores',
@@ -161,23 +161,6 @@ describe('cores', function() {
     });
 
 
-    // it('should use a custom validation function', function(done) {
-
-    //   var b = false;
-    //   var v = function(value) {
-    //     b = true;
-    //     return jski.schema(schema).validate(value);
-    //   };
-      
-    //   createResource({ name: resName + '2', schema: schema, validate: v }, function(err, r) {
-    //     r.validate(data, function(errs) {
-    //       assert(b);
-    //       done();
-    //     });
-    //   });
-    // });
-
-    
     it('should not save when not valid', function(done) {
       res.save({ type_: 'Article' }, function(err) {
         assert(util.isError(err));
