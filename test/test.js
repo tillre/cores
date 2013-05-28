@@ -408,4 +408,23 @@ describe('cores', function() {
       });
     });
   });
+
+  describe('uuids', function() {
+
+    it('should get a uuid', function(done) {
+      cores.uuids(function(err, ids) {
+        assert(!err);
+        assert(ids.uuids.length === 1);
+        done();
+      });
+    });
+
+    it('should get multiple uuids', function(done) {
+      cores.uuids(5, function(err, ids) {
+        assert(!err);
+        assert(ids.uuids.length === 5);
+        done();
+      });
+    });
+  });
 });
