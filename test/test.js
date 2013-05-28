@@ -145,7 +145,7 @@ describe('cores', function() {
         });
       });
 
-      
+
       it('should not validate data without required properties', function(done) {
         res.validate({ type_: 'Article' }, function(err) {
           assert(util.isError(err));
@@ -226,6 +226,20 @@ describe('cores', function() {
         res.destroy(doc, function(err) {
           assert(!err);
           done();
+        });
+      });
+
+
+      it('should save with id', function(done) {
+        var d = JSON.parse(JSON.stringify(doc));
+        delete d._rev;
+        d._id = 'my-id';
+        res.save(d, function(err, savedDoc) {
+          assert(!err);
+          res.load('my-id', function(err, loadedDoc) {
+            assert(!err);
+            res.destroy(loadedDoc, done);
+          });
         });
       });
     });
