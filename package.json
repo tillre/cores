@@ -1,7 +1,7 @@
 {
   "name": "cores",
-  "version": "0.0.2",
-  "description": "couchdb resources with validation",
+  "version": "0.0.3",
+  "description": "CouchDB resources with validation",
   "main": "index.js",
   "scripts": {
     "test": "./node_modules/mocha/bin/mocha -R spec ./test",
