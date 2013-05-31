@@ -1,6 +1,6 @@
 {
   "name": "cores",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "CouchDB resources with validation",
   "main": "index.js",
   "scripts": {
@@ -25,7 +25,7 @@
   } ],
   "dependencies": {
     "nano": "3.x.x",
-    "jski": "~0.1.0",
+    "jski": "~0.1.2",
     "async": "~0.2.8"
   },
   "devDependencies": {
