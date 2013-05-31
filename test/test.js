@@ -330,7 +330,7 @@ describe('cores', function() {
     var resources = null;
     
     it('should load from a directory', function(done) {
-      cores.load('./test/resources', function(err, res) {
+      cores.load('./test/resources', { validateRefs: true }, function(err, res) {
         assert(!err);
         assert(res.Article);
         assert(res.Image);
@@ -419,6 +419,27 @@ describe('cores', function() {
       resources.Article.validate(doc, function(err) {
         assert(err);
         done();
+      });
+    });
+
+    it('should validate invalid ref when validateRefs is false', function(done) {
+      cores.load('./test/resources', { validateRefs: false }, function(err, res) {
+        assert(!err);
+
+        var doc = {
+          title: 'Hello',
+          author: { firstname: 'Tim', lastname: 'Bo' },
+          image: {
+            name: 42,
+            url: '/some/path/bar.jpg'
+          },
+          body: 'Text...'
+        };
+        
+        res.Article.validate(doc, function(err) {
+          assert(!err);
+          done();
+        });
       });
     });
   });
