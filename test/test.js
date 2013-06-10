@@ -50,6 +50,8 @@ describe('cores', function() {
     var data = require('./article-data.js');
 
     var res = null;
+
+    var appData = {};
     
 
     it('should create with schema', function(done) {
@@ -84,10 +86,10 @@ describe('cores', function() {
       });
     });
 
-    it('should create with schema and design and hooks', function(done) {
+    it('should create with schema design and hooks', function(done) {
       cores.create(
         { name: resName, schema: schema, design: design, hooks: hooks,
-          app: { createOption: 'create', loadOption: 'load', saveOption: 'save' } },
+          app: appData },
 
         function(err, r) {
           assert(!err);
@@ -95,7 +97,6 @@ describe('cores', function() {
 
           res = r;
 
-          assert(typeof res.create === 'function');
           assert(typeof res.load === 'function');
           assert(typeof res.save === 'function');
           assert(typeof res.destroy === 'function');
@@ -121,30 +122,7 @@ describe('cores', function() {
 
     describe('crud', function() {
 
-      var doc;
-
-      it('should create a document', function(done) {
-        res.create(function(err, d) {
-          assert(!err);
-          assert(typeof d === 'object');
-          assert(!res.checkType(d));
-          done();
-        });
-      });
-
-      
-      it('should create a document with data', function(done) {
-        res.create(data, function(err, d) {
-          assert(!err);
-          assert(typeof d === 'object');
-          assert(!res.checkType(d));
-
-          doc = d;
-          
-          done();
-        });
-      });
-
+      var doc = JSON.parse(JSON.stringify(data));
 
       it('should not validate data without required properties', function(done) {
         res.validate({ type_: 'Article' }, function(err) {
@@ -210,18 +188,6 @@ describe('cores', function() {
       });
 
       
-      it('should have the properties from the hooks', function(done) {
-        res.load(doc._id, function(err, d) {
-          assert(!err);
-          assert(d.createHook === 'create');
-          assert(d.loadHook === 'load');
-          assert(d.saveHook === 'save');
-          
-          done();
-        });
-      });
-
-      
       it('should destroy', function(done) {
         res.destroy(doc, function(err) {
           assert(!err);
@@ -230,6 +196,14 @@ describe('cores', function() {
       });
 
 
+      it('should have called the hooks', function(done) {
+        assert(appData.loadHook);
+        assert(appData.saveHook);
+        assert(appData.destroyHook);
+        done();
+      });
+
+      
       it('should save with id', function(done) {
         var d = JSON.parse(JSON.stringify(doc));
         delete d._rev;
@@ -254,15 +228,14 @@ describe('cores', function() {
 
         async.times(numDocs, function(i, cb) {
           
-          res.create(data, function(err, d) {
-            d.title = d.title + ' ' + i;
-            res.save(d, function(err, sd) {
-              if (err) cb(err);
-              else {
-                docs.push(sd);
-                cb();
-              }
-            });
+          var d = JSON.parse(JSON.stringify(data));
+          d.title = d.title + ' ' + i;
+          res.save(d, function(err, sd) {
+            if (err) cb(err);
+            else {
+              docs.push(sd);
+              cb();
+            }
           });
           
         }, done);
@@ -368,24 +341,6 @@ describe('cores', function() {
     });
 
     
-    it('should create an Article doc', function(done) {
-      resources.Article.create(function(err, doc) {
-        assert(!err);
-        assert(typeof doc === 'object');
-        assert(!resources.Article.checkType(doc));
-        done();
-      });
-    });
-
-    
-    it('should create an Image doc', function(done) {
-      resources.Image.create(function(err, doc) {
-        assert(!err);
-        assert(!resources.Image.checkType(doc));
-        done();
-      });
-    });
-
     it('should validate a referenced resource', function(done) {
 
       var doc = {

@@ -1,17 +1,17 @@
 module.exports = {
 
-  create: function(app, doc, callback) {
-    doc.createHook = app.createOption;
-    callback(null, doc);
-  },
-
   load: function(app, doc, callback) {
-    doc.loadHook = app.loadOption;
+    app.loadHook = true;
     callback(null, doc);
   },
   
   save: function(app, doc, callback) {
-    doc.saveHook = app.saveOption;
+    app.saveHook = true;
+    callback(null, doc);
+  },
+
+  destroy: function(app, doc, callback) {
+    app.destroyHook = true;
     callback(null, doc);
   }
 };
