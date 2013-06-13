@@ -93,7 +93,6 @@ describe('cores', function() {
 
         function(err, r) {
           assert(!err);
-          assert(typeof r === 'object');
 
           res = r;
 
@@ -111,7 +110,6 @@ describe('cores', function() {
     it('should upload design to db', function(done) {
       db.get('_design/' + res.design.name, function(err, doc) {
         assert(!err);
-        assert(typeof doc.views === 'object');
         assert(doc.views.all);
         assert(doc.views.titles);
         done();
@@ -151,7 +149,6 @@ describe('cores', function() {
       it('should save when valid', function(done) {
         res.save(doc, function(err, d) {
           assert(!err);
-          assert(typeof d === 'object');
           assert(typeof d._id === 'string');
           assert(typeof d._rev === 'string');
           done();
@@ -163,7 +160,6 @@ describe('cores', function() {
         doc.title = 'Some other title';
         res.save(doc, function(err, d) {
           assert(!err);
-          assert(typeof d === 'object');
           assert(d._id === doc._id);
           assert(d._rev === doc._rev);
           done();
@@ -247,11 +243,29 @@ describe('cores', function() {
         }, done);
       });
 
+
+      it('should call the alias all view', function(done) {
+        res.all(function(err, result) {
+          assert(!err);
+          assert(result.total_rows === numDocs);
+          done();
+        });
+      });
+
+
+      it('should call the alias all view with params', function(done) {
+        res.all({ limit: 1 }, function(err, result) {
+          assert(!err);
+          assert(result.total_rows === numDocs);
+          assert(result.rows.length === 1);
+          done();
+        });
+      });
+
       
       it('should call the all view with no params', function(done) {
         res.view('all', function(err, docs) {
           assert(!err);
-          assert(typeof docs === 'object');
           assert(docs.total_rows === numDocs);
           done();
         });
@@ -271,7 +285,6 @@ describe('cores', function() {
       it('should call the titles view', function(done) {
         res.view('titles', function(err, docs) {
           assert(!err);
-          assert(typeof docs === 'object');
           assert(docs.total_rows === numDocs);
           done();
         });
