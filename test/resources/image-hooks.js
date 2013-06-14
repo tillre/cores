@@ -1,8 +1,8 @@
 module.exports = {
-  save: function(res, doc, callback) {
+  save: function(doc, callback) {
     callback(null, doc);
   },
-  load: function(res, doc, callback) {
+  load: function(doc, callback) {
     callback(null, doc);
   }
 };
