@@ -11,4 +11,4 @@ module.exports = js.object({
   image: js.ref('Image'),
   body: js.string()
   
-}).required(['title', 'author', 'body']);
+}).required('title', 'author', 'body');

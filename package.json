@@ -25,7 +25,7 @@
   } ],
   "dependencies": {
     "nano": "3.x.x",
-    "jski": "~0.1.2",
+    "jski": "~0.2.x",
     "async": "~0.2.8"
   },
   "devDependencies": {
