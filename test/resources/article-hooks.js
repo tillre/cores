@@ -3,15 +3,21 @@ var assert = require('assert');
 
 module.exports = {
 
-  load: function(doc, callback) {
+  read: function(doc, callback) {
     assert(this.name === 'Article');
     this.app.loadHook = true;
     callback(null, doc);
   },
   
-  save: function(doc, callback) {
+  create: function(doc, callback) {
     assert(this.name === 'Article');
-    this.app.saveHook = true;
+    this.app.createHook = true;
+    callback(null, doc);
+  },
+
+  update: function(doc, callback) {
+    assert(this.name === 'Article');
+    this.app.updateHook = true;
     callback(null, doc);
   },
 

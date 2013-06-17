@@ -194,7 +194,8 @@ describe('cores', function() {
 
       it('should have called the hooks', function(done) {
         assert(appData.loadHook);
-        assert(appData.saveHook);
+        assert(appData.createHook);
+        assert(appData.updateHook);
         assert(appData.destroyHook);
         done();
       });
