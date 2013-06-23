@@ -46,13 +46,10 @@ describe('cores', function() {
     var resName = 'Article';
     var schema = require('./resources/article-schema.js');
     var design = require('./resources/article-design.js');
-    var hooks = require('./resources/article-hooks.js');
     var data = require('./article-data.js');
 
     var res = null;
 
-    var appData = {};
-    
 
     it('should create with schema', function(done) {
       cores.create({ name: resName, schema: schema }, function(err, r) {
@@ -64,7 +61,7 @@ describe('cores', function() {
 
 
     it('should not create without name', function(done) {
-      cores.create({ schema: schema, design: design, hooks: hooks }, function(err, r) {
+      cores.create({ schema: schema }, function(err, r) {
         assert(util.isError(err));
         done();
       });
@@ -86,12 +83,8 @@ describe('cores', function() {
       });
     });
 
-    it('should create with schema design and hooks', function(done) {
-      cores.create(
-        { name: resName, schema: schema, design: design, hooks: hooks,
-          app: appData },
-
-        function(err, r) {
+    it('should create with schema and design', function(done) {
+      cores.create({ name: resName, schema: schema, design: design }, function(err, r) {
           assert(!err);
 
           res = r;
@@ -192,15 +185,6 @@ describe('cores', function() {
       });
 
 
-      it('should have called the hooks', function(done) {
-        assert(appData.loadHook);
-        assert(appData.createHook);
-        assert(appData.updateHook);
-        assert(appData.destroyHook);
-        done();
-      });
-
-      
       it('should save with id', function(done) {
         var d = JSON.parse(JSON.stringify(doc));
         delete d._rev;
@@ -340,21 +324,6 @@ describe('cores', function() {
     });
 
 
-    it('should load and add app data to resources', function(done) {
-      cores.load('./test/resources', { app: { foo: 42 } }, function(err, res) {
-        assert(!err);
-        assert(res.Article.app.foo === 42);
-        done();
-      });
-    });
-    
-    
-    it('should have hooks defined for Image resource', function() {
-      assert(typeof resources.Image.hooks.save === 'function');
-      assert(typeof resources.Image.hooks.load === 'function');
-    });
-
-    
     it('should validate a referenced resource', function(done) {
 
       var doc = {
