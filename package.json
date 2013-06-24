@@ -19,17 +19,19 @@
     "type": "git",
     "url": "git://github.com/skoni/cores.git"
   },
-  "licenses": [ {
-    "type": "Apache 2.0",
-    "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
-  } ],
+  "licenses": [
+    {
+      "type": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  ],
   "dependencies": {
     "nano": "3.x.x",
     "jski": "~0.2.x",
-    "walk-fs": "0.0.x",
-    "async": "~0.2.8"
+    "walk-fs": "0.0.x"
   },
   "devDependencies": {
-    "mocha": "1.x.x"
+    "mocha": "1.x.x",
+    "async": "~0.2.9"
   }
 }
