@@ -26,6 +26,7 @@
   "dependencies": {
     "nano": "3.x.x",
     "jski": "~0.2.x",
+    "walk-fs": "0.0.x",
     "async": "~0.2.8"
   },
   "devDependencies": {

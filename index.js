@@ -1,6 +1,6 @@
 var nano = require('nano');
 
-var createResource = require('./lib/create.js');
+var createResource = require('./lib/resource.js');
 var loadResources = require('./lib/load.js');
 
 
