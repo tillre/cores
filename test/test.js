@@ -229,25 +229,6 @@ describe('cores', function() {
       });
 
 
-      it('should call the alias all view', function(done) {
-        res.all(function(err, result) {
-          assert(!err);
-          assert(result.total_rows === numDocs);
-          done();
-        });
-      });
-
-
-      it('should call the alias all view with params', function(done) {
-        res.all({ limit: 1 }, function(err, result) {
-          assert(!err);
-          assert(result.total_rows === numDocs);
-          assert(result.rows.length === 1);
-          done();
-        });
-      });
-
-      
       it('should call the all view with no params', function(done) {
         res.view('all', function(err, docs) {
           assert(!err);
