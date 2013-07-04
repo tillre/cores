@@ -363,6 +363,40 @@ describe('cores', function() {
     });
   });
 
+
+  describe('fetch', function() {
+
+    var resources = null;
+    var data = require('./article-data.js');
+    
+    before(function(done) {
+      cores.load('./test/resources', function(err, res) {
+        assert(!err);
+        resources = res;
+
+        resources.Article.save(data, function(err, doc) {
+          assert(!err);
+          done();
+        });
+      });
+    });
+
+    it('should fetch docs', function(done) {
+
+      resources.Article.view('all', function(err, res) {
+
+        var keys = res.rows.map(function(row) { return row.id; });
+        
+        cores.fetch(keys, function(err, res) {
+          assert(!err);
+          assert(res.rows.length > 0);
+          done();
+        });
+      });
+    });
+  });
+  
+
   describe('uuids', function() {
 
     it('should get a uuid', function(done) {
