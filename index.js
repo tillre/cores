@@ -1,6 +1,6 @@
 var nano = require('nano');
 
-var createResource = require('./lib/resource.js');
+var createResource = require('./lib/create.js');
 var loadResources = require('./lib/load.js');
 
 
@@ -8,6 +8,11 @@ module.exports = function(db) {
 
   return {
 
+    db: db,
+
+    //
+    // fetch a couple of documents from couchdb by keys
+    //
     fetch: function(keys, params, callback) {
       if (arguments.length === 2 && typeof params === 'function') {
         callback = params;
@@ -15,18 +20,27 @@ module.exports = function(db) {
       }
       db.fetch({ keys: keys }, params, callback);
     },
-    
-    
+
+
+    //
+    // create a new resource object
+    //
     create: function(config, callback) {
-      return createResource(db, config, callback);
+      return createResource(this, config, callback);
     },
 
-    
+
+    //
+    // load resource definitions from a directory
+    //
     load: function(dir, options, callback) {
-      return loadResources(db, dir, options, callback);
+      return loadResources(this, dir, options, callback);
     },
 
-    
+
+    //
+    // get a number of fresh uuids from the couchdb
+    //
     uuids: function(count, callback) {
 
       if (typeof count === 'function') {
