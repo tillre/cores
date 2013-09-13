@@ -1,7 +1,5 @@
 var nano = require('nano');
-
 var createResource = require('./lib/create.js');
-var loadResources = require('./lib/load.js');
 
 
 module.exports = function(db) {
