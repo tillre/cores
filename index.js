@@ -25,16 +25,8 @@ module.exports = function(db) {
     //
     // create a new resource object
     //
-    create: function(config, callback) {
-      return createResource(this, config, callback);
-    },
-
-
-    //
-    // load resource definitions from a directory
-    //
-    load: function(dir, options, callback) {
-      return loadResources(this, dir, options, callback);
+    create: function(name, config, callback) {
+      return createResource(this, name, config, callback);
     },
 
 

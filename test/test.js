@@ -8,6 +8,10 @@ var jski = require('jski');
 var assert = require('assert');
 var util = require('util');
 
+var articleSchema = require('./article-schema.js');
+var articleDesign = require('./article-design.js');
+var articleData = require('./article-data.js');
+
 
 describe('cores', function() {
 
@@ -15,7 +19,6 @@ describe('cores', function() {
   var dbName = 'test-cores';
   var db = nano.use(dbName);
   cores = cores(db);
-
 
   before(function(done) {
     // setup test db
@@ -44,15 +47,11 @@ describe('cores', function() {
 
     // test data
     var resName = 'Article';
-    var schema = require('./resources/article-schema.js');
-    var design = require('./resources/article-design.js');
-    var data = require('./article-data.js');
-
     var res = null;
 
 
     it('should create with schema', function(done) {
-      cores.create({ name: resName, schema: schema }, function(err, r) {
+      cores.create(resName, { schema: articleSchema }, function(err, r) {
         assert(!err);
         assert(typeof r === 'object');
         done();
@@ -61,7 +60,7 @@ describe('cores', function() {
 
 
     it('should have properties defined', function(done) {
-      cores.create({ name: resName, schema: schema }, function(err, r) {
+      cores.create(resName, { schema: articleSchema }, function(err, r) {
         assert(!err);
         assert(r.cores === cores);
         assert(r.name === resName);
@@ -72,16 +71,8 @@ describe('cores', function() {
     });
 
 
-    it('should not create without name', function(done) {
-      cores.create({ schema: schema }, function(err, r) {
-        assert(util.isError(err));
-        done();
-      });
-    });
-
-
     it('should not create with invalid schema', function(done) {
-      cores.create({ name: resName, schema: { properties: { type: 'boolean' }}}, function(err, r) {
+      cores.create(resName, { schema: { properties: { type: 'boolean' }}}, function(err, r) {
         assert(util.isError(err));
         done();
       });
@@ -89,14 +80,14 @@ describe('cores', function() {
 
 
     it('should not create with invalid design', function(done) {
-      cores.create({ name: resName, schema: schema, design: { views:'' } }, function(err, r) {
+      cores.create(resName, { schema: articleSchema, design: { views:'' } }, function(err, r) {
         assert(util.isError(err));
         done();
       });
     });
 
     it('should create with schema and design', function(done) {
-      cores.create({ name: resName, schema: schema, design: design }, function(err, r) {
+      cores.create(resName, { schema: articleSchema, design: articleDesign }, function(err, r) {
           assert(!err);
 
           res = r;
@@ -125,7 +116,7 @@ describe('cores', function() {
 
     describe('crud', function() {
 
-      var doc = JSON.parse(JSON.stringify(data));
+      var doc = JSON.parse(JSON.stringify(articleData));
 
       it('should not validate data without required properties', function(done) {
         res.validate({ type_: 'Article' }, function(err) {
@@ -136,7 +127,7 @@ describe('cores', function() {
 
 
       it('should validate with required properties', function(done) {
-        res.validate(data, function(err) {
+        res.validate(articleData, function(err) {
           assert(!err);
           done();
         });
@@ -221,7 +212,7 @@ describe('cores', function() {
 
         async.times(numDocs, function(i, cb) {
 
-          var d = JSON.parse(JSON.stringify(data));
+          var d = JSON.parse(JSON.stringify(articleData));
           d.title = d.title + ' ' + i;
           res.save(d, function(err, sd) {
             if (err) cb(err);
@@ -289,104 +280,17 @@ describe('cores', function() {
   });
 
 
-  describe('loading', function() {
-
-    var resources = null;
-
-    it('should load from a directory', function(done) {
-      cores.load('./test/resources', { validateRefs: true }, function(err, res) {
-        assert(!err);
-        assert(res.Article);
-        assert(res.Image);
-
-        resources = res;
-
-        done();
-      });
-    });
-
-
-    it('should load recursively from a directory', function(done) {
-      cores.load('./test/resources', { recursive: true }, function(err, res) {
-        assert(!err);
-        assert(res.Article);
-        assert(res.Image);
-        assert(res.SubDir);
-        done();
-      });
-    });
-
-
-    it('should validate a referenced resource', function(done) {
-
-      var doc = {
-        title: 'Hello',
-        author: { firstname: 'Tim', lastname: 'Bo' },
-        image: {
-          name: 'Hello',
-          url: 'http://host.com/some/path/bar.jpg'
-        },
-        body: 'Text...'
-      };
-
-      resources.Article.validate(doc, function(err) {
-        assert(!err);
-        done();
-      });
-    });
-
-    it('should not validate a invalid referenced resource', function(done) {
-
-      var doc = {
-        title: 'Hello',
-        author: { firstname: 'Tim', lastname: 'Bo' },
-        image: {
-          name: 42,
-          url: '/some/path/bar.jpg'
-        },
-        body: 'Text...'
-      };
-
-      resources.Article.validate(doc, function(err) {
-        assert(err);
-        done();
-      });
-    });
-
-    it('should validate invalid ref when validateRefs is false', function(done) {
-      cores.load('./test/resources', { validateRefs: false }, function(err, res) {
-        assert(!err);
-
-        var doc = {
-          title: 'Hello',
-          author: { firstname: 'Tim', lastname: 'Bo' },
-          image: {
-            name: 42,
-            url: '/some/path/bar.jpg'
-          },
-          body: 'Text...'
-        };
-
-        res.Article.validate(doc, function(err) {
-          assert(!err);
-          done();
-        });
-      });
-    });
-  });
-
-
   describe('fetch', function() {
 
-    var resources = null;
-    var data = require('./article-data.js');
+    var resName = 'Article';
+    var resource = null;
 
     before(function(done) {
-      cores.load('./test/resources', function(err, res) {
+      cores.create(resName, { schema: articleSchema }, function(err, r) {
         assert(!err);
-        resources = res;
+        resource = r;
 
-        resources.Article.save(data, function(err, doc) {
+        resource.save(articleData, function(err) {
           assert(!err);
           done();
         });
@@ -395,7 +299,7 @@ describe('cores', function() {
 
     it('should fetch docs', function(done) {
 
-      resources.Article.view('all', function(err, res) {
+      resource.view('all', function(err, res) {
 
         var keys = res.rows.map(function(row) { return row.id; });
 
