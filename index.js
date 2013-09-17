@@ -1,4 +1,5 @@
 var nano = require('nano');
+var Q = require('kew');
 var createResource = require('./lib/create.js');
 
 
@@ -11,33 +12,44 @@ module.exports = function(db) {
     //
     // fetch a couple of documents from couchdb by keys
     //
-    fetch: function(keys, params, callback) {
-      if (arguments.length === 2 && typeof params === 'function') {
-        callback = params;
-        params = {};
-      }
-      db.fetch({ keys: keys }, params, callback);
+    fetch: function(keys, params) {
+
+      params = params || {};
+      var defer = Q.defer();
+
+      db.fetch({ keys: keys }, params, function(err, result) {
+        if (err) return defer.reject(err);
+        defer.resolve(result);
+      });
+      return defer.promise;
     },
 
 
     //
     // create a new resource object
     //
-    create: function(name, config, callback) {
-      return createResource(this, name, config, callback);
+    create: function(name, config) {
+
+      return createResource(this, name, config);
     },
 
 
     //
     // get a number of fresh uuids from the couchdb
     //
-    uuids: function(count, callback) {
+    uuids: function(count) {
 
-      if (typeof count === 'function') {
-        callback = count;
-        count = 1;
-      }
-      nano(db.config.url).relax({ path: '_uuids', params: { count: count }}, callback);
+      count = count || 1;
+      var defer = Q.defer();
+
+      nano(db.config.url).relax({
+        path: '_uuids', params: { count: count }
+
+      }, function(err, result) {
+        if (err) return defer.reject();
+        defer.resolve(result);
+      });
+      return defer.promise;
     }
   };
 };

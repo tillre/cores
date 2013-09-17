@@ -1,6 +1,7 @@
 /*global before after beforeEach afterEach describe it*/
 
-var async = require('async');
+// var async = require('async');
+var Q = require('kew');
 var nano = require('nano')('http://localhost:5984');
 var cores = require('../index.js');
 var jski = require('jski');
@@ -51,28 +52,28 @@ describe('cores', function() {
 
 
     it('should create with schema', function(done) {
-      cores.create(resName, { schema: articleSchema }, function(err, r) {
-        assert(!err);
+      cores.create(resName, { schema: articleSchema }).then(function(r) {
         assert(typeof r === 'object');
         done();
-      });
+      }, done);
     });
 
 
     it('should have properties defined', function(done) {
-      cores.create(resName, { schema: articleSchema }, function(err, r) {
-        assert(!err);
+      cores.create(resName, { schema: articleSchema }).then(function(r) {
         assert(r.cores === cores);
         assert(r.name === resName);
         assert(typeof r.schema === 'object');
         assert(typeof r.design === 'object');
         done();
-      });
+      }, done);
     });
 
 
     it('should not create with invalid schema', function(done) {
-      cores.create(resName, { schema: { properties: { type: 'boolean' }}}, function(err, r) {
+      cores.create(resName, { schema: { properties: { type: 'boolean' }}}).then(function(r) {
+        assert(false);
+      }, function(err) {
         assert(util.isError(err));
         done();
       });
@@ -80,16 +81,16 @@ describe('cores', function() {
 
 
     it('should not create with invalid design', function(done) {
-      cores.create(resName, { schema: articleSchema, design: { views:'' } }, function(err, r) {
+      cores.create(resName, { schema: articleSchema, design: { views:'' } }).then(function(r) {
+        assert(false);
+      }, function(err) {
         assert(util.isError(err));
         done();
       });
     });
 
     it('should create with schema and design', function(done) {
-      cores.create(resName, { schema: articleSchema, design: articleDesign }, function(err, r) {
-          assert(!err);
-
+      cores.create(resName, { schema: articleSchema, design: articleDesign }).then(function(r) {
           res = r;
 
           assert(typeof res.load === 'function');
@@ -98,8 +99,7 @@ describe('cores', function() {
           assert(typeof res.view === 'function');
 
           done();
-        }
-      );
+      }, done);
     });
 
 
@@ -119,7 +119,9 @@ describe('cores', function() {
       var doc = JSON.parse(JSON.stringify(articleData));
 
       it('should not validate data without required properties', function(done) {
-        res.validate({ type_: 'Article' }, function(err) {
+        res.validate({ type_: 'Article' }).then(function(doc) {
+          assert(false);
+        }, function(err) {
           assert(util.isError(err));
           done();
         });
@@ -127,15 +129,16 @@ describe('cores', function() {
 
 
       it('should validate with required properties', function(done) {
-        res.validate(articleData, function(err) {
-          assert(!err);
+        res.validate(articleData).then(function(doc) {
           done();
-        });
+        }, done);
       });
 
 
       it('should not save when not valid', function(done) {
-        res.save({ type_: 'Article' }, function(err) {
+        res.save({ type_: 'Article' }).then(function(doc) {
+          assert(false);
+        }, function(err) {
           assert(util.isError(err));
           done();
         });
@@ -143,28 +146,28 @@ describe('cores', function() {
 
 
       it('should save when valid', function(done) {
-        res.save(doc, function(err, d) {
-          assert(!err);
+        res.save(doc).then(function(d) {
           assert(typeof d._id === 'string');
           assert(typeof d._rev === 'string');
           done();
-        });
+        }, done);
       });
 
 
       it('should save when updated', function(done) {
         doc.title = 'Some other title';
-        res.save(doc, function(err, d) {
-          assert(!err);
+        res.save(doc).then(function(d) {
           assert(d._id === doc._id);
           assert(d._rev === doc._rev);
           done();
-        });
+        }, done);
       });
 
 
       it('should not save when has wrong type', function(done) {
-        res.save({ _id: 'somefoo', type_: 'Foo' }, function(err, d) {
+        res.save({ _id: 'somefoo', type_: 'Foo' }).then(function(d) {
+          assert(false);
+        }, function(err) {
           assert(util.isError(err));
           done();
         });
@@ -172,17 +175,35 @@ describe('cores', function() {
 
 
       it('should load', function(done) {
-        res.load(doc._id, function(err, d) {
-          assert(!err);
+        res.load(doc._id).then(function(d) {
           assert(d.title === doc.title);
+          done();
+        }, done);
+      });
+
+
+      it('should not load nonexistant doc', function(done) {
+        res.load('fooo').then(function(doc) {
+          assert(false);
+        }, function(err) {
+          assert(util.isError(err));
           done();
         });
       });
 
 
       it('should destroy', function(done) {
-        res.destroy(doc, function(err) {
-          assert(!err);
+        res.destroy(doc).then(function() {
+          done();
+        }, done);
+      });
+
+
+      it('should not destroy nonexistant doc', function(done) {
+        res.destroy({ _id: 'foo', _rev: 'bar' }).then(function() {
+          assert(false);
+        }, function(err) {
+          assert(util.isError(err));
           done();
         });
       });
@@ -192,13 +213,16 @@ describe('cores', function() {
         var d = JSON.parse(JSON.stringify(doc));
         delete d._rev;
         d._id = 'my-id';
-        res.save(d, function(err, savedDoc) {
-          assert(!err);
-          res.load('my-id', function(err, loadedDoc) {
-            assert(!err);
-            res.destroy(loadedDoc, done);
-          });
-        });
+
+        res.save(d).then(function(saveDoc) {
+          return res.load('my-id');
+
+        }).then(function(loadedDoc) {
+          return res.destroy(loadedDoc);
+
+        }).then(function() {
+          done();
+        }, done);
       });
     });
 
@@ -210,68 +234,68 @@ describe('cores', function() {
 
       before(function(done) {
 
-        async.times(numDocs, function(i, cb) {
-
+        var promises = [];
+        for (var i = 0; i < numDocs; ++i) {
           var d = JSON.parse(JSON.stringify(articleData));
           d.title = d.title + ' ' + i;
-          res.save(d, function(err, sd) {
-            if (err) cb(err);
-            else {
-              docs.push(sd);
-              cb();
-            }
-          });
-
+          promises.push(res.save(d).then(function(doc) {
+            docs.push(doc);
+          }));
+        }
+        Q.all(promises).then(function() {
+          done();
         }, done);
       });
 
       after(function(done) {
-        async.each(docs, function(d, cb) {
-          res.destroy(d, cb);
+        var promises = [];
+        docs.forEach(function(doc) {
+          promises.push(res.destroy(doc));
+        });
+        Q.all(promises).then(function() {
+          done();
         }, done);
       });
 
 
       it('should call the all view with no params', function(done) {
-        res.view('all', function(err, docs) {
-          assert(!err);
-          assert(docs.total_rows === numDocs);
+        res.view('all').then(function(result) {
+          assert(result.total_rows === numDocs);
           done();
-        });
+        }, done);
       });
 
 
       it('should call the all view with params', function(done) {
-        res.view('all', { limit: 2  }, function(err, docs) {
-          assert(!err);
-          assert(docs.total_rows === numDocs);
-          assert(docs.rows.length === 2);
+        res.view('all', { limit: 2  }).then(function(result) {
+          assert(result.total_rows === numDocs);
+          assert(result.rows.length === 2);
           done();
-        });
+        }, done);
       });
 
 
       it('should call the titles view', function(done) {
-        res.view('titles', function(err, docs) {
-          assert(!err);
-          assert(docs.total_rows === numDocs);
+        res.view('titles').then(function(result) {
+          assert(result.total_rows === numDocs);
           done();
-        });
+        }, done);
       });
 
 
       it('should call the titles view with params', function(done) {
-        res.view('titles', { limit: 1 }, function(err, docs) {
-          assert(!err);
-          assert(docs.total_rows === numDocs);
-          assert(docs.rows.length === 1);
+        res.view('titles', { limit: 1 }).then(function(result) {
+          assert(result.total_rows === numDocs);
+          assert(result.rows.length === 1);
           done();
-        });
+        }, done);
       });
 
 
       it('should respond with error when view does not exist', function(done) {
-        res.view('foo', function(err, docs) {
+        res.view('foo').then(function(result) {
+          assert(false);
+        }, function(err) {
           assert(util.isError(err));
           done();
         });
@@ -286,29 +310,23 @@ describe('cores', function() {
     var resource = null;
 
     before(function(done) {
-      cores.create(resName, { schema: articleSchema }, function(err, r) {
-        assert(!err);
+      cores.create(resName, { schema: articleSchema }).then(function(r) {
         resource = r;
-
-        resource.save(articleData, function(err) {
-          assert(!err);
+        r.save(articleData).then(function(doc) {
           done();
-        });
+        }, done());
       });
     });
 
     it('should fetch docs', function(done) {
 
-      resource.view('all', function(err, res) {
-
-        var keys = res.rows.map(function(row) { return row.id; });
-
-        cores.fetch(keys, function(err, res) {
-          assert(!err);
-          assert(res.rows.length > 0);
+      resource.view('all').then(function(result) {
+        var keys = result.rows.map(function(row) { return row.id; });
+        cores.fetch(keys).then(function(result) {
+          assert(result.rows.length > 0);
           done();
-        });
-      });
+        }, done);
+      }, done);
     });
   });
 
@@ -316,19 +334,17 @@ describe('cores', function() {
   describe('uuids', function() {
 
     it('should get a uuid', function(done) {
-      cores.uuids(function(err, ids) {
-        assert(!err);
-        assert(ids.uuids.length === 1);
+      cores.uuids().then(function(result) {
+        assert(result.uuids.length === 1);
         done();
-      });
+      }, done);
     });
 
     it('should get multiple uuids', function(done) {
-      cores.uuids(5, function(err, ids) {
-        assert(!err);
-        assert(ids.uuids.length === 5);
+      cores.uuids(5).then(function(result) {
+        assert(result.uuids.length === 5);
         done();
-      });
+      }, done);
     });
   });
 });
