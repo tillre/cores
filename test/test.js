@@ -14,6 +14,11 @@ var articleDesign = require('./article-design.js');
 var articleData = require('./article-data.js');
 
 
+function clone(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
+
+
 describe('cores', function() {
 
   // create db before tests and destroy afterwards
@@ -116,7 +121,7 @@ describe('cores', function() {
 
     describe('crud', function() {
 
-      var doc = JSON.parse(JSON.stringify(articleData));
+      var doc = clone(articleData);
 
       it('should not validate data without required properties', function(done) {
         res.validate({ type_: 'Article' }).then(function(doc) {
@@ -210,7 +215,7 @@ describe('cores', function() {
 
 
       it('should save with id', function(done) {
-        var d = JSON.parse(JSON.stringify(doc));
+        var d = clone(doc);
         delete d._rev;
         d._id = 'my-id';
 
@@ -236,7 +241,7 @@ describe('cores', function() {
 
         var promises = [];
         for (var i = 0; i < numDocs; ++i) {
-          var d = JSON.parse(JSON.stringify(articleData));
+          var d = clone(articleData);
           d.title = d.title + ' ' + i;
           promises.push(res.save(d).then(function(doc) {
             docs.push(doc);
@@ -304,7 +309,7 @@ describe('cores', function() {
   });
 
 
-  describe('fetch', function() {
+  describe('fetch docs', function() {
 
     var resName = 'Article';
     var resource = null;
@@ -312,7 +317,7 @@ describe('cores', function() {
     before(function(done) {
       cores.create(resName, { schema: articleSchema }).then(function(r) {
         resource = r;
-        r.save(articleData).then(function(doc) {
+        r.save(clone(articleData)).then(function(doc) {
           done();
         }, done());
       });
@@ -327,6 +332,67 @@ describe('cores', function() {
           done();
         }, done);
       }, done);
+    });
+  });
+
+
+  describe('fetch refs', function() {
+
+    var resName = 'Article';
+    var resource = null;
+    var doc1, doc2, doc3;
+
+    before(function(done) {
+      cores.create(resName, { schema: articleSchema }).then(function(r) {
+        resource = r;
+        var data1 = clone(articleData);
+        data1.title = 'the first one';
+        var data2 = clone(articleData);
+        data2.title = 'the second one';
+        var data3 = clone(articleData);
+        data3.title = 'the third one';
+
+        r.save(data1).then(function(doc) {
+          doc1 = doc;
+          data2.other = { id_: doc._id };
+          data3.other1 = { id_: doc._id };
+          return r.save(data2);
+
+        }).then(function(doc) {
+          doc2 = doc;
+          data3.other2 = { id_: doc._id };
+          return r.save(data3);
+
+        }).then(function(doc) {
+          doc3 = doc;
+          done();
+        }, done);
+      });
+    });
+
+    it('should fetch doc refs', function(done) {
+      cores.fetchDocRefs(doc2).then(function(doc) {
+        assert(doc.other.title === 'the first one');
+        done();
+      }, done);
+    });
+
+    it('should fetch multiple docs refs', function(done) {
+      var keys = [doc2._id, doc3._id];
+      resource.view('all', { keys: keys, include_docs: true }).then(function(result) {
+        var docs = result.rows.map(function(row) {
+          return row.doc;
+        });
+
+        cores.fetchDocsRefs(docs).then(function(docs) {
+          var d2 = docs[0]._id === doc2._id ? docs[0] : docs[1];
+          var d3 = docs[0]._id === doc2._id ? docs[1] : docs[0];
+          assert(d2.other.title === 'the first one');
+          assert(d3.other1.title === 'the first one');
+          assert(d3.other2.title === 'the second one');
+          done();
+        });
+      }, function(err) { console.log('err', err); done(err); });
     });
   });
 
