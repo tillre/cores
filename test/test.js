@@ -64,6 +64,14 @@ describe('cores', function() {
     });
 
 
+    it('should create without schema', function(done) {
+      cores.create(resName, {}).then(function(r) {
+        assert(typeof r === 'object');
+        done();
+      }, done);
+    });
+
+
     it('should have properties defined', function(done) {
       cores.create(resName, { schema: articleSchema }).then(function(r) {
         assert(r.cores === cores);
