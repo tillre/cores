@@ -1,6 +1,5 @@
 /*global before after beforeEach afterEach describe it*/
 
-// var async = require('async');
 var Q = require('kew');
 var nano = require('nano')('http://localhost:5984');
 var cores = require('../index.js');
@@ -9,8 +8,8 @@ var jski = require('jski');
 var assert = require('assert');
 var util = require('util');
 
-var articleSchema = require('./article-schema.js');
-var articleDesign = require('./article-design.js');
+var articleSchema = require('./resources/article-schema.js');
+var articleDesign = require('./resources/article-design.js');
 var articleData = require('./article-data.js');
 
 
@@ -23,8 +22,7 @@ describe('cores', function() {
 
   // create db before tests and destroy afterwards
   var dbName = 'test-cores';
-  var db = nano.use(dbName);
-  cores = cores(db);
+  cores = cores('http://localhost:5984/' + dbName);
 
   before(function(done) {
     // setup test db
@@ -56,54 +54,56 @@ describe('cores', function() {
     var res = null;
 
 
-    it('should create with schema', function(done) {
-      cores.create(resName, { schema: articleSchema }).then(function(r) {
-        assert(typeof r === 'object');
-        done();
-      }, done);
-    });
-
-
-    it('should create without schema', function(done) {
-      cores.create(resName, {}).then(function(r) {
-        assert(typeof r === 'object');
-        done();
-      }, done);
-    });
-
-
-    it('should have properties defined', function(done) {
-      cores.create(resName, { schema: articleSchema }).then(function(r) {
-        assert(r.cores === cores);
-        assert(r.name === resName);
-        assert(typeof r.schema === 'object');
-        assert(typeof r.design === 'object');
-        done();
-      }, done);
-    });
-
-
-    it('should not create with invalid schema', function(done) {
-      cores.create(resName, { schema: { properties: { type: 'boolean' }}}).then(function(r) {
-        assert(false);
-      }, function(err) {
-        assert(util.isError(err));
-        done();
+    describe('create', function() {
+      it('should create with schema', function(done) {
+        cores.create(resName, { schema: articleSchema }).then(function(r) {
+          assert(typeof r === 'object');
+          assert(cores.resources[r.name]);
+          done();
+        }, done);
       });
-    });
 
 
-    it('should not create with invalid design', function(done) {
-      cores.create(resName, { schema: articleSchema, design: { views:'' } }).then(function(r) {
-        assert(false);
-      }, function(err) {
-        assert(util.isError(err));
-        done();
+      it('should create without schema', function(done) {
+        cores.create(resName, {}).then(function(r) {
+          assert(typeof r === 'object');
+          done();
+        }, done);
       });
-    });
 
-    it('should create with schema and design', function(done) {
-      cores.create(resName, { schema: articleSchema, design: articleDesign }).then(function(r) {
+
+      it('should have properties defined', function(done) {
+        cores.create(resName, { schema: articleSchema }).then(function(r) {
+          assert(r.cores === cores);
+          assert(r.name === resName);
+          assert(typeof r.schema === 'object');
+          assert(typeof r.design === 'object');
+          done();
+        }, done);
+      });
+
+
+      it('should not create with invalid schema', function(done) {
+        cores.create(resName, { schema: { properties: { type: 'boolean' }}}).then(function(r) {
+          assert(false);
+        }, function(err) {
+          assert(util.isError(err));
+          done();
+        });
+      });
+
+
+      it('should not create with invalid design', function(done) {
+        cores.create(resName, { schema: articleSchema, design: { views:'' } }).then(function(r) {
+          assert(false);
+        }, function(err) {
+          assert(util.isError(err));
+          done();
+        });
+      });
+
+      it('should create with schema and design', function(done) {
+        cores.create(resName, { schema: articleSchema, design: articleDesign }).then(function(r) {
           res = r;
 
           assert(typeof res.load === 'function');
@@ -112,19 +112,40 @@ describe('cores', function() {
           assert(typeof res.view === 'function');
 
           done();
-      }, done);
-    });
+        }, done);
+      });
 
 
-    it('should upload design to db', function(done) {
-      db.get('_design/' + res.design.name, function(err, doc) {
-        assert(!err);
-        assert(doc.views.all);
-        assert(doc.views.titles);
-        done();
+      it('should upload design to db', function(done) {
+        cores.db.get('_design/' + res.design.name, function(err, doc) {
+          assert(!err);
+          assert(doc.views.all);
+          assert(doc.views.titles);
+          done();
+        });
       });
     });
 
+
+    describe('load', function() {
+
+      it('should load resources from directory', function(done) {
+        cores.load('./test/resources').then(function(res) {
+          assert(res.Article);
+          assert(cores.resources.Article);
+          done();
+        }, done);
+      });
+
+      it('should not load from invalid directory', function(done) {
+        cores.load('./test/foo').then(function(res) {
+          assert(false);
+        }, function(err) {
+          assert(util.isError(err));
+          done();
+        });
+      });
+    });
 
 
     describe('crud', function() {
@@ -378,21 +399,21 @@ describe('cores', function() {
       });
     });
 
-    it('should fetch doc refs', function(done) {
-      cores.fetchDocRefs(doc2).then(function(doc) {
+    it('should fetch refs of single doc', function(done) {
+      cores.fetchRefs(doc2).then(function(doc) {
         assert(doc.other.title === 'the first one');
         done();
       }, done);
     });
 
-    it('should fetch multiple docs refs', function(done) {
+    it('should fetch refs of multiple docs', function(done) {
       var keys = [doc2._id, doc3._id];
       resource.view('all', { keys: keys, include_docs: true }).then(function(result) {
         var docs = result.rows.map(function(row) {
           return row.doc;
         });
 
-        cores.fetchDocsRefs(docs).then(function(docs) {
+        cores.fetchRefs(docs).then(function(docs) {
           var d2 = docs[0]._id === doc2._id ? docs[0] : docs[1];
           var d3 = docs[0]._id === doc2._id ? docs[1] : docs[0];
           assert(d2.other.title === 'the first one');
