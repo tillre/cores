@@ -1,14 +1,14 @@
-var js = require('jski');
+var J = require('jski')();
 
-module.exports = js.object({
+module.exports = J.object({
 
-  title: js.string(),
-  author: js.object({
-    firstname: js.string(),
-    lastname: js.string()
+  title: J.string(),
+  author: J.object({
+    firstname: J.string(),
+    lastname: J.string()
   }),
-  tags: js.array(js.string()),
-  image: js.ref('Image'),
-  body: js.string()
-  
+  tags: J.array(J.string()),
+  image: J.ref('Image'),
+  body: J.string()
+
 }).required('title', 'author', 'body');
