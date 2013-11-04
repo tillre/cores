@@ -380,20 +380,28 @@ describe('cores', function() {
         data2.title = 'the second one';
         var data3 = clone(articleData);
         data3.title = 'the third one';
+        var data4 = clone(articleData);
+        data4.title = 'the fourth one';
 
         r.save(data1).then(function(doc) {
           doc1 = doc;
-          data2.other = { id_: doc._id };
-          data3.other1 = { id_: doc._id };
+          data2.other = { id_: doc1._id };
           return r.save(data2);
 
         }).then(function(doc) {
           doc2 = doc;
-          data3.other2 = { id_: doc._id };
+          data3.other1 = { id_: doc1._id };
+          data3.other2 = { id_: doc2._id };
           return r.save(data3);
 
         }).then(function(doc) {
           doc3 = doc;
+          data4.other3 = { id_: doc3._id };
+          return r.save(data4);
+
+        }).then(function(doc) {
+          doc4 = doc;
+
           done();
         }, done);
       });
@@ -413,15 +421,25 @@ describe('cores', function() {
           return row.doc;
         });
 
-        cores.fetchRefs(docs).then(function(docs) {
+        return cores.fetchRefs(docs).then(function(docs) {
           var d2 = docs[0]._id === doc2._id ? docs[0] : docs[1];
           var d3 = docs[0]._id === doc2._id ? docs[1] : docs[0];
           assert(d2.other.title === 'the first one');
           assert(d3.other1.title === 'the first one');
           assert(d3.other2.title === 'the second one');
           done();
-        });
-      }, function(err) { console.log('err', err); done(err); });
+        }, done);
+      }, done);
+    });
+
+    it('should fetch refs deep', function(done) {
+
+      resource.load(doc4._id).then(function(doc) {
+        return cores.fetchRefs(doc, true).then(function(doc) {
+          assert(doc.other3.other2.other.title === 'the first one');
+          done();
+        }, done);
+      }, done);
     });
   });
 

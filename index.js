@@ -34,14 +34,14 @@ module.exports = function(dbConfig) {
   //
   // fetch documents refs
   //
-  cores.fetchRefs = function(docs) {
+  cores.fetchRefs = function(docs, deep) {
     if (util.isArray(docs)) {
       // fetch refs of array of document
-      return fetchRefs(this, docs);
+      return fetchRefs(this, docs, deep);
     }
     else if (typeof docs === 'object' && docs) {
       // fetch refs of single document
-      return fetchRefs(this, [docs]).then(function(result) {
+      return fetchRefs(this, [docs], deep).then(function(result) {
         return result[0];
       });
     }
