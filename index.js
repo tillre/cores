@@ -71,11 +71,11 @@ module.exports = function(dbConfig) {
   //
   // create a new resource object
   //
-  cores.create = function(name, config) {
+  cores.create = function(name, config, syncNow) {
     var self = this;
-    return createResource(this, name, config).then(function(resource) {
-      self.resources[resource.name] = resource;
-      return resource;
+    return createResource(this, name, config, syncNow).then(function(res) {
+      self.resources[res.name] = res;
+      return res;
     });
   };
 
@@ -83,13 +83,28 @@ module.exports = function(dbConfig) {
   //
   // load resource definitions from a directory
   //
-  cores.load = function(dir) {
+  cores.load = function(dir, syncDesign) {
     var self = this;
     return loadResources(this, dir).then(function(resources) {
       common.merge(self.resources, resources);
       return resources;
     });
   };
+
+
+  //
+  // sync all design docs with the database
+  // Warning: this will update the view index
+  //
+  cores.sync = function() {
+    var self = this;
+    var pms = [];
+    Object.keys(this.resources).forEach(function(key) {
+      pms.push(self.resources[key].sync());
+    });
+    return Q.all(pms);
+  };
+
 
   return cores;
 };

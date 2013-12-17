@@ -51,7 +51,7 @@ describe('cores', function() {
 
     // test data
     var resName = 'Article';
-    var res = null;
+    var resName2 = 'Foo';
 
 
     describe('create', function() {
@@ -102,27 +102,20 @@ describe('cores', function() {
         });
       });
 
+
       it('should create with schema and design', function(done) {
         cores.create(resName, { schema: articleSchema, design: articleDesign }).then(function(r) {
-          res = r;
-
-          assert(typeof res.load === 'function');
-          assert(typeof res.save === 'function');
-          assert(typeof res.destroy === 'function');
-          assert(typeof res.view === 'function');
-
           done();
         }, done);
       });
 
 
-      it('should upload design to db', function(done) {
-        cores.db.get('_design/' + res.design.name, function(err, doc) {
-          assert(!err);
-          assert(doc.views.all);
-          assert(doc.views.titles);
-          done();
-        });
+      it('should have methods defined', function() {
+        var res = cores.resources[resName];
+        assert(typeof res.load === 'function');
+        assert(typeof res.save === 'function');
+        assert(typeof res.destroy === 'function');
+        assert(typeof res.view === 'function');
       });
     });
 
@@ -148,9 +141,48 @@ describe('cores', function() {
     });
 
 
+    describe('sync', function() {
+
+      it('should sync design to db', function(done) {
+        cores.load('./test/resources').then(function(resources) {
+          resources.Article.sync().then(function() {
+            cores.db.get('_design/' + resources.Article.design.name, function(err, doc) {
+              assert(!err);
+              assert(doc.views.all);
+              assert(doc.views.titles);
+              done();
+            });
+          }, done);
+        }, done);
+      });
+
+
+      it('should sync all design to db', function(done) {
+        cores.create(resName2, {}).then(function(r) {
+          cores.sync().then(function() {
+            cores.db.get('_design/' + r.design.name, function(err, doc) {
+              assert(!err);
+              assert(doc.views.all);
+              done();
+            });
+          }, done);
+        }, done);
+      });
+    });
+
+
     describe('crud', function() {
 
       var doc = clone(articleData);
+      var res = null;
+
+      before(function(done) {
+        cores.load('./test/resources').then(function(resources) {
+          res = resources.Article;
+          done();
+        }, done);
+      });
+
 
       it('should not validate data without required properties', function(done) {
         res.validate({ type_: 'Article' }).then(function(doc) {
@@ -265,19 +297,24 @@ describe('cores', function() {
 
       var docs = [];
       var numDocs = 3;
+      var res = null;
 
       before(function(done) {
 
-        var promises = [];
-        for (var i = 0; i < numDocs; ++i) {
-          var d = clone(articleData);
-          d.title = d.title + ' ' + i;
-          promises.push(res.save(d).then(function(doc) {
-            docs.push(doc);
-          }));
-        }
-        Q.all(promises).then(function() {
-          done();
+        cores.load('./test/resources').then(function(resources) {
+          res = resources.Article;
+          var promises = [];
+          for (var i = 0; i < numDocs; ++i) {
+            var d = clone(articleData);
+            d.title = d.title + ' ' + i;
+            promises.push(res.save(d).then(function(doc) {
+              docs.push(doc);
+            }));
+          }
+          Q.all(promises).then(function() {
+            done();
+          }, done);
+
         }, done);
       });
 
@@ -344,7 +381,7 @@ describe('cores', function() {
     var resource = null;
 
     before(function(done) {
-      cores.create(resName, { schema: articleSchema }).then(function(r) {
+      cores.create(resName, { schema: articleSchema }, true).then(function(r) {
         resource = r;
         r.save(clone(articleData)).then(function(doc) {
           done();
@@ -372,7 +409,7 @@ describe('cores', function() {
     var doc1, doc2, doc3;
 
     before(function(done) {
-      cores.create(resName, { schema: articleSchema }).then(function(r) {
+      cores.create(resName, { schema: articleSchema }, true).then(function(r) {
         resource = r;
         var data1 = clone(articleData);
         data1.title = 'the first one';
