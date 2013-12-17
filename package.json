@@ -1,6 +1,6 @@
 {
   "name": "cores",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "CouchDB resources with validation",
   "main": "index.js",
   "scripts": {

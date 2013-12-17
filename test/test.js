@@ -18,6 +18,34 @@ function clone(obj) {
 }
 
 
+function createDocs(res, numDocs) {
+  var docs = [];
+  var promises = [];
+
+  for (var i = 0; i < numDocs; ++i) {
+    var d = clone(articleData);
+    d.title = d.title + ' ' + i;
+    promises.push(res.save(d).then(function(doc) {
+      docs.push(doc);
+    }));
+  }
+  return Q.all(promises).then(function() {
+    return docs;
+  });
+}
+
+
+function destroyDocs(res, docs) {
+  var promises = [];
+  docs.forEach(function(doc) {
+    promises.push(res.destroy(doc));
+  });
+  return Q.all(promises);
+}
+
+
+
+
 describe('cores', function() {
 
   // create db before tests and destroy afterwards
@@ -55,12 +83,22 @@ describe('cores', function() {
 
 
     describe('create', function() {
+
       it('should create with schema', function(done) {
         cores.create(resName, { schema: articleSchema }).then(function(r) {
           assert(typeof r === 'object');
           assert(cores.resources[r.name]);
           done();
         }, done);
+      });
+
+
+      it('should have methods defined', function() {
+        var res = cores.resources[resName];
+        assert(typeof res.load === 'function');
+        assert(typeof res.save === 'function');
+        assert(typeof res.destroy === 'function');
+        assert(typeof res.view === 'function');
       });
 
 
@@ -107,15 +145,6 @@ describe('cores', function() {
         cores.create(resName, { schema: articleSchema, design: articleDesign }).then(function(r) {
           done();
         }, done);
-      });
-
-
-      it('should have methods defined', function() {
-        var res = cores.resources[resName];
-        assert(typeof res.load === 'function');
-        assert(typeof res.save === 'function');
-        assert(typeof res.destroy === 'function');
-        assert(typeof res.view === 'function');
       });
     });
 
@@ -300,30 +329,15 @@ describe('cores', function() {
       var res = null;
 
       before(function(done) {
-
-        cores.load('./test/resources').then(function(resources) {
-          res = resources.Article;
-          var promises = [];
-          for (var i = 0; i < numDocs; ++i) {
-            var d = clone(articleData);
-            d.title = d.title + ' ' + i;
-            promises.push(res.save(d).then(function(doc) {
-              docs.push(doc);
-            }));
-          }
-          Q.all(promises).then(function() {
-            done();
-          }, done);
-
+        res = cores.resources.Article;
+        createDocs(res, numDocs).then(function(result) {
+          docs = result;
+          done();
         }, done);
       });
 
       after(function(done) {
-        var promises = [];
-        docs.forEach(function(doc) {
-          promises.push(res.destroy(doc));
-        });
-        Q.all(promises).then(function() {
+        destroyDocs(res, docs).then(function() {
           done();
         }, done);
       });
@@ -370,6 +384,52 @@ describe('cores', function() {
           assert(util.isError(err));
           done();
         });
+      });
+    });
+
+
+    describe('map', function() {
+
+      var docs = [];
+      var numDocs = 3;
+      var res = null;
+
+      before(function(done) {
+        res = cores.resources.Article;
+        createDocs(res, numDocs).then(function(result) {
+          docs = result;
+          done();
+        }, done);
+      });
+
+      after(function(done) {
+        destroyDocs(res, docs).then(function() {
+          done();
+        }, done);
+      });
+
+
+      it('should update a couple of documents', function(done) {
+
+        res.map('all', function(doc) {
+          doc.mapTest = true;
+          return doc;
+
+        }).then(function() {
+          return cores.fetch(
+            docs.map(function(doc) {
+              return doc._id;
+            }),
+            { include_docs: true }
+
+          ).then(function(result) {
+            result.rows.forEach(function(row, i) {
+              assert(row.doc.mapTest);
+              docs[i]._rev = row.doc._rev;
+            });
+            done();
+          });
+        }, done);
       });
     });
   });
