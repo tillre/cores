@@ -85,7 +85,7 @@ module.exports = function(dbConfig) {
   //
   cores.load = function(dir, syncDesign) {
     var self = this;
-    return loadResources(this, dir).then(function(resources) {
+    return loadResources(this, dir, syncDesign).then(function(resources) {
       common.merge(self.resources, resources);
       return resources;
     });
