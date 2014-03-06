@@ -1,12 +1,11 @@
 /*global before after beforeEach afterEach describe it*/
 
 var Q = require('kew');
-var nano = require('nano')('http://localhost:5984');
-var cores = require('../index.js');
-var jski = require('jski');
+var Nano = require('nano')('http://localhost:5984');
+var Cores = require('../index.js');
 
+var Util = require('util');
 var assert = require('assert');
-var util = require('util');
 
 var articleSchema = require('./resources/article-schema.js');
 var articleDesign = require('./resources/article-design.js');
@@ -44,34 +43,35 @@ function destroyDocs(res, docs) {
 }
 
 
-
+var cores;
+var dbName = 'test-cores';
 
 describe('cores', function() {
 
   // create db before tests and destroy afterwards
-  var dbName = 'test-cores';
-  cores = cores('http://localhost:5984/' + dbName);
-
   before(function(done) {
+
+    cores = Cores('http://localhost:5984/' + dbName);
+
     // setup test db
-    nano.db.get(dbName, function(err, body) {
+    Nano.db.get(dbName, function(err, body) {
       if (!err) {
         // db exists, recreate
-        nano.db.destroy(dbName, function(err) {
+        Nano.db.destroy(dbName, function(err) {
           if (err) done(err);
-          nano.db.create(dbName, done);
+          Nano.db.create(dbName, done);
         });
       }
       else if (err.reason === 'no_db_file'){
         // create the db
-        nano.db.create(dbName, done);
+        Nano.db.create(dbName, done);
       }
       else done(err);
     });
   });
 
   after(function(done) {
-    nano.db.destroy(dbName, done);
+    Nano.db.destroy(dbName, done);
   });
 
 
@@ -125,7 +125,7 @@ describe('cores', function() {
         cores.create(resName, { schema: { properties: { type: 'boolean' }}}).then(function(r) {
           assert(false);
         }, function(err) {
-          assert(util.isError(err));
+          assert(Util.isError(err));
           done();
         });
       });
@@ -135,7 +135,7 @@ describe('cores', function() {
         cores.create(resName, { schema: articleSchema, design: { views:'' } }).then(function(r) {
           assert(false);
         }, function(err) {
-          assert(util.isError(err));
+          assert(Util.isError(err));
           done();
         });
       });
@@ -163,9 +163,17 @@ describe('cores', function() {
         cores.load('./test/foo').then(function(res) {
           assert(false);
         }, function(err) {
-          assert(util.isError(err));
+          assert(Util.isError(err));
           done();
         });
+      });
+
+      it('should load resources with context', function(done) {
+        var context = { test: false };
+        cores.load('./test/resources', context).then(function(res) {
+          assert(context.test);
+          done();
+        }, done);
       });
     });
 
@@ -217,7 +225,7 @@ describe('cores', function() {
         res.validate({ type_: 'Article' }).then(function(doc) {
           assert(false);
         }, function(err) {
-          assert(util.isError(err));
+          assert(Util.isError(err));
           done();
         });
       });
@@ -234,7 +242,7 @@ describe('cores', function() {
         res.save({ type_: 'Article' }).then(function(doc) {
           assert(false);
         }, function(err) {
-          assert(util.isError(err));
+          assert(Util.isError(err));
           done();
         });
       });
@@ -263,7 +271,7 @@ describe('cores', function() {
         res.save({ _id: 'somefoo', type_: 'Foo' }).then(function(d) {
           assert(false);
         }, function(err) {
-          assert(util.isError(err));
+          assert(Util.isError(err));
           done();
         });
       });
@@ -281,7 +289,7 @@ describe('cores', function() {
         res.load('fooo').then(function(doc) {
           assert(false);
         }, function(err) {
-          assert(util.isError(err));
+          assert(Util.isError(err));
           done();
         });
       });
@@ -298,7 +306,7 @@ describe('cores', function() {
         res.destroy({ _id: 'foo', _rev: 'bar' }).then(function() {
           assert(false);
         }, function(err) {
-          assert(util.isError(err));
+          assert(Util.isError(err));
           done();
         });
       });
@@ -381,7 +389,7 @@ describe('cores', function() {
         res.view('foo').then(function(result) {
           assert(false);
         }, function(err) {
-          assert(util.isError(err));
+          assert(Util.isError(err));
           done();
         });
       });
@@ -553,6 +561,17 @@ describe('cores', function() {
     it('should get multiple uuids', function(done) {
       cores.uuids(5).then(function(result) {
         assert(result.uuids.length === 5);
+        done();
+      }, done);
+    });
+  });
+
+
+  describe('info', function() {
+
+    it('should get the db info', function(done) {
+      cores.info().then(function(info) {
+        assert(info.db_name === dbName);
         done();
       }, done);
     });
