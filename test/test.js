@@ -1,8 +1,8 @@
 /*global before after beforeEach afterEach describe it*/
 
 var Q = require('kew');
-var Nano = require('nano')('http://localhost:5984');
 var Cores = require('../index.js');
+var Couchdb = require('../lib/couchdb.js');
 
 var Util = require('util');
 var assert = require('assert');
@@ -10,6 +10,8 @@ var assert = require('assert');
 var articleSchema = require('./resources/article-schema.js');
 var articleDesign = require('./resources/article-design.js');
 var articleData = require('./article-data.js');
+
+var couchdb = Couchdb('http://localhost:5984/test-cores');
 
 
 function clone(obj) {
@@ -53,25 +55,20 @@ describe('cores', function() {
 
     cores = Cores('http://localhost:5984/' + dbName);
 
-    // setup test db
-    Nano.db.get(dbName, function(err, body) {
-      if (!err) {
-        // db exists, recreate
-        Nano.db.destroy(dbName, function(err) {
-          if (err) done(err);
-          Nano.db.create(dbName, done);
-        });
-      }
-      else if (err.reason === 'no_db_file'){
-        // create the db
-        Nano.db.create(dbName, done);
-      }
-      else done(err);
-    });
+    couchdb.info().then(function() {
+      return couchdb.destroyDB().then(function() {
+        return couchdb.createDB();
+      });
+    }, function(err) {
+      return couchdb.createDB();
+
+    }).then(function() {
+      done();
+    }, done);
   });
 
   after(function(done) {
-    Nano.db.destroy(dbName, done);
+    couchdb.destroyDB().then(function() { done(); }, done);
   });
 
 
@@ -182,27 +179,28 @@ describe('cores', function() {
 
       it('should sync design to db', function(done) {
         cores.load('./test/resources').then(function(resources) {
-          resources.Article.sync().then(function() {
-            cores.db.get('_design/' + resources.Article.design.name, function(err, doc) {
-              assert(!err);
+          return resources.Article.sync().then(function() {
+            return couchdb.load('_design/' + resources.Article.design.name).then(function(doc) {
               assert(doc.views.all);
               assert(doc.views.titles);
               done();
             });
-          }, done);
+          });
         }, done);
       });
 
 
       it('should sync all design to db', function(done) {
         cores.create(resName2, {}).then(function(r) {
-          cores.sync().then(function() {
-            cores.db.get('_design/' + r.design.name, function(err, doc) {
-              assert(!err);
+          return cores.sync().then(function() {
+            return couchdb.load(
+              '_design/' + cores.resources.Article.design.name
+
+            ).then(function(doc) {
               assert(doc.views.all);
               done();
             });
-          }, done);
+          });
         }, done);
       });
     });
@@ -396,50 +394,7 @@ describe('cores', function() {
     });
 
 
-    describe('map', function() {
 
-      var docs = [];
-      var numDocs = 3;
-      var res = null;
-
-      before(function(done) {
-        res = cores.resources.Article;
-        createDocs(res, numDocs).then(function(result) {
-          docs = result;
-          done();
-        }, done);
-      });
-
-      after(function(done) {
-        destroyDocs(res, docs).then(function() {
-          done();
-        }, done);
-      });
-
-
-      it('should update a couple of documents', function(done) {
-
-        res.map('all', function(doc) {
-          doc.mapTest = true;
-          return doc;
-
-        }).then(function() {
-          return cores.fetch(
-            docs.map(function(doc) {
-              return doc._id;
-            }),
-            { include_docs: true }
-
-          ).then(function(result) {
-            result.rows.forEach(function(row, i) {
-              assert(row.doc.mapTest);
-              docs[i]._rev = row.doc._rev;
-            });
-            done();
-          });
-        }, done);
-      });
-    });
   });
 
 
@@ -470,11 +425,57 @@ describe('cores', function() {
   });
 
 
-  describe('fetch refs', function() {
+  describe('map', function() {
 
+    var docs = [];
+    var numDocs = 3;
+    var res = null;
+
+    before(function(done) {
+      res = cores.resources.Article;
+      createDocs(res, numDocs).then(function(result) {
+        docs = result;
+        done();
+      }, done);
+    });
+
+    after(function(done) {
+      destroyDocs(res, docs).then(function() {
+        done();
+      }, done);
+    });
+
+
+    it('should update a couple of documents', function(done) {
+
+      res.map('all', function(doc) {
+        doc.mapTest = true;
+        return doc;
+
+      }).then(function() {
+
+        return cores.fetch(
+          docs.map(function(doc) {
+            return doc._id;
+          }),
+          { include_docs: true }
+
+        ).then(function(result) {
+          result.rows.forEach(function(row, i) {
+            assert(row.doc.mapTest);
+            docs[i]._rev = row.doc._rev;
+          });
+          done();
+        });
+      }, done);
+    });
+  });
+
+
+  describe('fetch refs', function() {
     var resName = 'Article';
     var resource = null;
-    var doc1, doc2, doc3;
+    var doc1, doc2, doc3, doc4;
 
     before(function(done) {
       cores.create(resName, { schema: articleSchema }, true).then(function(r) {
@@ -568,7 +569,6 @@ describe('cores', function() {
 
 
   describe('info', function() {
-
     it('should get the db info', function(done) {
       cores.info().then(function(info) {
         assert(info.db_name === dbName);

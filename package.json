@@ -1,10 +1,11 @@
 {
   "name": "cores",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "CouchDB resources with validation",
   "main": "index.js",
   "scripts": {
     "test": "./node_modules/mocha/bin/mocha -R spec ./test",
+    "debug-test": "./node_modules/mocha/bin/mocha --debug-brk -R spec ./test",
     "watch-tests": "./node_modules/mocha/bin/mocha -w ./test"
   },
   "keywords": [
@@ -26,9 +27,8 @@
     }
   ],
   "dependencies": {
-    "nano": "~5.x.x",
     "jski": "~0.5.x",
-    "kew": "~0.3.x",
+    "kew": "~0.4.x",
     "walk-fs": "0.0.2"
   },
   "devDependencies": {

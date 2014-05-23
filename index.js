@@ -1,6 +1,7 @@
 var Util = require('util');
-var Nano = require('nano');
 var Q = require('kew');
+
+var Couchdb = require('./lib/couchdb');
 
 var Common = require('./lib/common.js');
 var createResource = require('./lib/create-resource.js');
@@ -10,23 +11,18 @@ var fetchRefs = require('./lib/fetch-refs.js');
 
 module.exports = function(options) {
 
+  var couchdb = Couchdb(options);
+
   return {
 
-    db: Nano(options),
     resources: {},
+    couchdb: couchdb,
 
     //
     // fetch a couple of documents by keys
     //
-    fetch: function(keys, params) {
-      params = params || {};
-      var defer = Q.defer();
-
-      this.db.fetch({ keys: keys }, params, function(err, result) {
-        if (err) return defer.reject(err);
-        return defer.resolve(result);
-      });
-      return defer.promise;
+    fetch: function(keys, query) {
+      return couchdb.bulkLoad(keys, query);
     },
 
 
@@ -49,21 +45,10 @@ module.exports = function(options) {
 
 
     //
-    // get a number of fresh uuids from the couchdb
+    // get a number of fresh uuids from couchdb
     //
     uuids: function(count) {
-
-      count = count || 1;
-      var defer = Q.defer();
-
-      Nano(this.db.config.url).relax({
-        path: '_uuids', params: { count: count }
-
-      }, function(err, result) {
-        if (err) return defer.reject();
-        return defer.resolve(result);
-      });
-      return defer.promise;
+      return couchdb.uuids(count);
     },
 
 
@@ -108,12 +93,7 @@ module.exports = function(options) {
     // Get info on current db
     //
     info: function() {
-      var defer = Q.defer();
-      this.db.info(function(err, info) {
-        if (err) return defer.reject(err);
-        return defer.resolve(info);
-      });
-      return defer.promise;
+      return couchdb.info();
     }
   };
 };
