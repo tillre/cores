@@ -1,6 +1,6 @@
 {
   "name": "cores",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "CouchDB resources with validation",
   "main": "index.js",
   "scripts": {
@@ -29,7 +29,8 @@
   "dependencies": {
     "jski": "~0.5.x",
     "kew": "~0.4.x",
-    "walk-fs": "0.0.2"
+    "walk-fs": "0.0.2",
+    "request": "~2.x.x"
   },
   "devDependencies": {
     "mocha": "1.x.x"
