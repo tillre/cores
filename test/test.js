@@ -172,6 +172,13 @@ describe('cores', function() {
           done();
         }, done);
       });
+
+      it('should ignore files with leading underscore when loading', function(done) {
+        cores.load('./test/resources').then(function(res) {
+          assert(!res.Underscore);
+          done();
+        }, done);
+      });
     });
 
 
