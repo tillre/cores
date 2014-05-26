@@ -333,6 +333,7 @@ describe('cores', function() {
       var docs = [];
       var numDocs = 3;
       var res = null;
+      var id = '';
 
       before(function(done) {
         res = cores.resources.Article;
@@ -361,6 +362,7 @@ describe('cores', function() {
         res.view('all', { limit: 2  }).then(function(result) {
           assert(result.total_rows === numDocs);
           assert(result.rows.length === 2);
+          id = result.rows[0].id;
           done();
         }, done);
       });
@@ -376,6 +378,15 @@ describe('cores', function() {
 
       it('should call the titles view with params', function(done) {
         res.view('titles', { limit: 1 }).then(function(result) {
+          assert(result.total_rows === numDocs);
+          assert(result.rows.length === 1);
+          done();
+        }, done);
+      });
+
+
+      it('should call the view with string params', function(done) {
+        res.view('titles', { key: id }).then(function(result) {
           assert(result.total_rows === numDocs);
           assert(result.rows.length === 1);
           done();
