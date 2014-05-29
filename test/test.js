@@ -594,4 +594,21 @@ describe('cores', function() {
       }, done);
     });
   });
+
+
+  describe('auth', function() {
+    // TODO: real test with existing user
+    cores = Cores({
+      url: 'http://localhost:5984/' + dbName,
+      user: 'admin',
+      pass: 'admin'
+    });
+
+    it('should successfully call the db', function(done) {
+      cores.info().then(function(info) {
+        done();
+      }, done);
+    });
+  });
+
 });
