@@ -11,7 +11,8 @@ var articleSchema = require('./resources/article-schema.js');
 var articleDesign = require('./resources/article-design.js');
 var articleData = require('./article-data.js');
 
-var couchdb = Couchdb('http://localhost:5984/test-cores');
+var db = 'http://localhost:5984/test-cores';
+var couchdb = Couchdb(db);
 
 
 function clone(obj) {
@@ -96,6 +97,7 @@ describe('cores', function() {
         assert(typeof res.save === 'function');
         assert(typeof res.destroy === 'function');
         assert(typeof res.view === 'function');
+        assert(typeof res.search === 'function');
       });
 
 
@@ -190,6 +192,7 @@ describe('cores', function() {
             return couchdb.load('_design/' + resources.Article.design.name).then(function(doc) {
               assert(doc.views.all);
               assert(doc.views.titles);
+              assert(doc.indexes.titles);
               done();
             });
           });
@@ -412,8 +415,12 @@ describe('cores', function() {
     });
 
 
-
+    describe('search', function() {
+      // TODO
+    });
   });
+
+
 
 
   describe('fetch docs', function() {
